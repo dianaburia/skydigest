@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment (created by uv, not committed)
+.venv/
+venv/
+
+# Secrets! Never commit the real .env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Generated journal issues
+output/
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Private project docs (not for public repo)
+CLAUDE.md
+PHASE1_STEPS.md
+IDEAS.md
