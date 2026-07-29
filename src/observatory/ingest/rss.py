@@ -54,12 +54,16 @@ def _entry_content(entry: Any) -> str | None:
         return None
 
 
-def fetch_feed(source: str, url: str) -> int:
-    """Fetch one feed and insert new entries. Returns count of new rows."""
+def parse_feed_entries(source: str, url: str) -> list[Article]:
+    """Fetch and parse a feed into Article objects. No DB access, no side effects.
+
+    Skips entries missing a link or a title. On a fully broken feed
+    (parse error and zero entries), logs a warning and returns [].
+    """
     parsed = feedparser.parse(url)
     if parsed.bozo and not parsed.entries:
         logger.warning("Failed to parse feed %s: %s", source, parsed.bozo_exception)
-        return 0
+        return []
 
     articles: list[Article] = []
     for entry in parsed.entries:
@@ -77,11 +81,14 @@ def fetch_feed(source: str, url: str) -> int:
                 published_at=parse_pub_date(getattr(entry, "published", None)),
             )
         )
+    return articles
 
+
+def fetch_feed(source: str, url: str) -> int:
+    """Fetch a feed, parse entries, and insert new ones. Returns count of new rows."""
+    articles = parse_feed_entries(source, url)
     inserted = insert_articles(articles)
-    logger.info(
-        "Feed %s: %d new / %d total in feed", source, inserted, len(parsed.entries)
-    )
+    logger.info("Feed %s: %d new / %d parsed", source, inserted, len(articles))
     return inserted
 
 
