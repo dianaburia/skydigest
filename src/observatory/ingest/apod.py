@@ -59,7 +59,7 @@ def fetch_apod() -> dict[str, Any] | None:
     return {"apod": data, "url": article_url, "inserted": inserted}
 
 
-def _main() -> int:
+def main() -> int:
     setup_logging()
     result = fetch_apod()
     if result is None:
@@ -82,4 +82,4 @@ def _main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(_main())
+    sys.exit(main())

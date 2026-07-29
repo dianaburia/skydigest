@@ -104,7 +104,7 @@ def fetch_all_feeds() -> dict[str, int]:
     return counts
 
 
-def _main() -> int:
+def main() -> int:
     setup_logging()
     # feedparser has no timeout parameter; set a global socket timeout so a
     # single stalled feed cannot block the whole run indefinitely.
@@ -123,4 +123,4 @@ def _main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(_main())
+    sys.exit(main())
