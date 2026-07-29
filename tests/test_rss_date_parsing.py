@@ -21,11 +21,8 @@ def test_naive_date_assumed_utc():
     assert dt == datetime(2026, 7, 18, 14, 30, 0, tzinfo=timezone.utc)
 
 
-def test_none_returns_none():
+def test_none_or_empty_returns_none():
     assert parse_pub_date(None) is None
-
-
-def test_empty_returns_none():
     assert parse_pub_date("") is None
 
 
