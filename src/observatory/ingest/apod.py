@@ -11,6 +11,7 @@ from typing import Any
 
 from observatory.config import get_settings
 from observatory.infra.http import get_json
+from observatory.infra.logging_setup import setup_logging
 from observatory.repository import Article, insert_article
 
 logger = logging.getLogger(__name__)
@@ -59,10 +60,7 @@ def fetch_apod() -> dict[str, Any] | None:
 
 
 def _main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    # httpx logs full request URLs at INFO level, which would leak the api_key
-    # query parameter. Silence it — fetch_apod logs the events we care about.
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    setup_logging()
     result = fetch_apod()
     if result is None:
         print("Failed to fetch APOD (see errors above).", file=sys.stderr)

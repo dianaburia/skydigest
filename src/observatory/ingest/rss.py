@@ -9,6 +9,7 @@ from typing import Any
 
 import feedparser
 
+from observatory.infra.logging_setup import setup_logging
 from observatory.repository import Article, insert_articles
 
 logger = logging.getLogger(__name__)
@@ -97,8 +98,7 @@ def fetch_all_feeds() -> dict[str, int]:
 
 
 def _main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    setup_logging()
     # feedparser has no timeout parameter; set a global socket timeout so a
     # single stalled feed cannot block the whole run indefinitely.
     socket.setdefaulttimeout(30)
