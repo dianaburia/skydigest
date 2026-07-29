@@ -9,7 +9,7 @@ from typing import Any
 
 import feedparser
 
-from observatory.db import get_conn
+from observatory.repository import Article, insert_articles
 
 logger = logging.getLogger(__name__)
 
@@ -60,33 +60,28 @@ def fetch_feed(source: str, url: str) -> int:
         logger.warning("Failed to parse feed %s: %s", source, parsed.bozo_exception)
         return 0
 
-    inserted_total = 0
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            for entry in parsed.entries:
-                link = getattr(entry, "link", None)
-                title = getattr(entry, "title", None)
-                if not link or not title:
-                    continue
+    articles: list[Article] = []
+    for entry in parsed.entries:
+        link = getattr(entry, "link", None)
+        title = getattr(entry, "title", None)
+        if not link or not title:
+            continue
+        articles.append(
+            Article(
+                source=source,
+                url=link,
+                title=title,
+                summary=_entry_summary(entry),
+                content=_entry_content(entry),
+                published_at=parse_pub_date(getattr(entry, "published", None)),
+            )
+        )
 
-                summary = _entry_summary(entry)
-                content = _entry_content(entry)
-                published_at = parse_pub_date(getattr(entry, "published", None))
-
-                cur.execute(
-                    """
-                    INSERT INTO articles (source, url, title, summary, content, published_at)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (url) DO NOTHING
-                    """,
-                    (source, link, title, summary, content, published_at),
-                )
-                inserted_total += cur.rowcount
-
+    inserted = insert_articles(articles)
     logger.info(
-        "Feed %s: %d new / %d total in feed", source, inserted_total, len(parsed.entries)
+        "Feed %s: %d new / %d total in feed", source, inserted, len(parsed.entries)
     )
-    return inserted_total
+    return inserted
 
 
 def fetch_all_feeds() -> dict[str, int]:

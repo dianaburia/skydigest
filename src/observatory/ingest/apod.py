@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 
 from observatory.config import get_settings
-from observatory.db import get_conn
+from observatory.repository import Article, insert_article
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def fetch_apod() -> dict[str, Any] | None:
     """Fetch today's APOD and insert it into the articles table.
 
     Returns a dict with the parsed payload, the canonical page URL, and
-    ``inserted`` (0 if the entry was already present, 1 if newly added).
+    ``inserted`` (True if newly added, False if already present).
     Returns None on network or HTTP error.
     """
     settings = get_settings()
@@ -60,26 +60,18 @@ def fetch_apod() -> dict[str, Any] | None:
     article_url = _apod_page_url(day)
     image_url = data.get("hdurl") or data.get("url")
 
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO articles (source, url, title, summary, image_url, published_at)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (url) DO NOTHING
-                """,
-                (
-                    "apod",
-                    article_url,
-                    data["title"],
-                    data.get("explanation"),
-                    image_url,
-                    _to_utc_midnight(day),
-                ),
-            )
-            inserted = cur.rowcount
+    inserted = insert_article(
+        Article(
+            source="apod",
+            url=article_url,
+            title=data["title"],
+            summary=data.get("explanation"),
+            image_url=image_url,
+            published_at=_to_utc_midnight(day),
+        )
+    )
 
-    logger.info("APOD %s: %s (inserted=%d)", day, data["title"], inserted)
+    logger.info("APOD %s: %s (inserted=%s)", day, data["title"], inserted)
     return {"apod": data, "url": article_url, "inserted": inserted}
 
 
