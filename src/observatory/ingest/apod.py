@@ -9,15 +9,13 @@ import sys
 from datetime import date, datetime, timezone
 from typing import Any
 
-import httpx
-
 from observatory.config import get_settings
+from observatory.infra.http import get_json
 from observatory.repository import Article, insert_article
 
 logger = logging.getLogger(__name__)
 
 APOD_ENDPOINT = "https://api.nasa.gov/planetary/apod"
-REQUEST_TIMEOUT = 10.0
 
 
 def _apod_page_url(day: date) -> str:
@@ -37,25 +35,10 @@ def fetch_apod() -> dict[str, Any] | None:
     Returns None on network or HTTP error.
     """
     settings = get_settings()
-    try:
-        response = httpx.get(
-            APOD_ENDPOINT,
-            params={"api_key": settings.nasa_api_key},
-            timeout=REQUEST_TIMEOUT,
-        )
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        logger.error(
-            "APOD API returned HTTP %s: %s",
-            e.response.status_code,
-            e.response.text[:200],
-        )
-        return None
-    except httpx.HTTPError as e:
-        logger.error("APOD API request failed: %s", e)
+    data = get_json(APOD_ENDPOINT, params={"api_key": settings.nasa_api_key})
+    if data is None:
         return None
 
-    data = response.json()
     day = date.fromisoformat(data["date"])
     article_url = _apod_page_url(day)
     image_url = data.get("hdurl") or data.get("url")
