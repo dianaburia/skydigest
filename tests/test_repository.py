@@ -6,7 +6,7 @@ They require ``docker compose up -d`` to be running.
 
 import pytest
 
-from observatory.db import get_conn
+from observatory.infra.db import get_conn
 from observatory.repository import Article, insert_article, insert_articles
 
 TEST_SOURCE = "__test__"

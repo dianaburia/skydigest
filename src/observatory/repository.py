@@ -12,7 +12,7 @@ Functions own their own connections; callers do not pass cursors.
 from dataclasses import asdict, dataclass
 from datetime import datetime
 
-from observatory.db import get_conn
+from observatory.infra.db import get_conn
 
 
 @dataclass
