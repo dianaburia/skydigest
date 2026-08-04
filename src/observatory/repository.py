@@ -54,3 +54,45 @@ def insert_articles(articles: list[Article]) -> int:
 def insert_article(article: Article) -> bool:
     """Insert one article. Returns True if newly added, False on URL conflict."""
     return insert_articles([article]) == 1
+
+
+@dataclass
+class Paper:
+    arxiv_id: str
+    title: str
+    abstract: str
+    authors: list[str]
+    categories: list[str]
+    url: str
+    published_at: datetime
+    pdf_url: str | None = None
+    updated_at: datetime | None = None
+
+
+_INSERT_PAPER_SQL = """
+    INSERT INTO papers (arxiv_id, title, abstract, authors, categories, url, pdf_url, published_at, updated_at)
+    VALUES (%(arxiv_id)s, %(title)s, %(abstract)s, %(authors)s, %(categories)s, %(url)s, %(pdf_url)s, %(published_at)s, %(updated_at)s)
+    ON CONFLICT (arxiv_id) DO NOTHING
+"""
+
+
+def insert_papers(papers: list[Paper]) -> int:
+    """Insert a batch of papers atomically. Returns the count of new rows.
+
+    Rows whose arxiv_id already exists are silently skipped (per the
+    PRIMARY KEY on papers.arxiv_id and ON CONFLICT DO NOTHING).
+    """
+    if not papers:
+        return 0
+    total = 0
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for paper in papers:
+                cur.execute(_INSERT_PAPER_SQL, asdict(paper))
+                total += cur.rowcount
+    return total
+
+
+def insert_paper(paper: Paper) -> bool:
+    """Insert one paper. Returns True if newly added, False on arxiv_id conflict."""
+    return insert_papers([paper]) == 1
