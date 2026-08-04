@@ -96,3 +96,35 @@ def insert_papers(papers: list[Paper]) -> int:
 def insert_paper(paper: Paper) -> bool:
     """Insert one paper. Returns True if newly added, False on arxiv_id conflict."""
     return insert_papers([paper]) == 1
+
+
+@dataclass
+class SpaceWeatherMeasurement:
+    ts: datetime
+    metric: str  # one of: 'kp', 'sw_speed', 'sw_density', 'bz' (CHECK in schema)
+    value: float
+
+
+_INSERT_MEASUREMENT_SQL = """
+    INSERT INTO space_weather (ts, metric, value)
+    VALUES (%(ts)s, %(metric)s, %(value)s)
+    ON CONFLICT (ts, metric) DO NOTHING
+"""
+
+
+def insert_measurements(measurements: list[SpaceWeatherMeasurement]) -> int:
+    """Insert a batch of space-weather measurements atomically.
+
+    Returns the count of newly inserted rows. Rows whose (ts, metric) pair
+    already exists are silently skipped (per the primary key on the table
+    and ON CONFLICT DO NOTHING).
+    """
+    if not measurements:
+        return 0
+    total = 0
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for m in measurements:
+                cur.execute(_INSERT_MEASUREMENT_SQL, asdict(m))
+                total += cur.rowcount
+    return total
