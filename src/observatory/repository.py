@@ -98,6 +98,39 @@ def insert_paper(paper: Paper) -> bool:
     return insert_papers([paper]) == 1
 
 
+def list_recent_articles(days: int = 7) -> list[Article]:
+    """Return articles published (or, lacking a date, ingested) in the last N days."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT source, url, title, summary, content, image_url, published_at
+                FROM articles
+                WHERE COALESCE(published_at, created_at) >= NOW() - make_interval(days => %(days)s)
+                ORDER BY COALESCE(published_at, created_at) DESC
+                """,
+                {"days": days},
+            )
+            return [Article(*row) for row in cur.fetchall()]
+
+
+def list_recent_papers(days: int = 7) -> list[Paper]:
+    """Return papers published in the last N days."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT arxiv_id, title, abstract, authors, categories, url,
+                       published_at, pdf_url, updated_at
+                FROM papers
+                WHERE published_at >= NOW() - make_interval(days => %(days)s)
+                ORDER BY published_at DESC
+                """,
+                {"days": days},
+            )
+            return [Paper(*row) for row in cur.fetchall()]
+
+
 @dataclass
 class SpaceWeatherMeasurement:
     ts: datetime
@@ -110,6 +143,53 @@ _INSERT_MEASUREMENT_SQL = """
     VALUES (%(ts)s, %(metric)s, %(value)s)
     ON CONFLICT (ts, metric) DO NOTHING
 """
+
+
+@dataclass
+class SpaceWeatherSummary:
+    """Weekly aggregate of space-weather metrics for the journal."""
+
+    max_kp: float | None
+    max_kp_at: datetime | None
+    storm_intervals: int  # count of 3-hour Kp readings >= 5 (storm level G1+)
+    avg_sw_speed: float | None
+    max_sw_speed: float | None
+    min_bz: float | None
+
+
+def get_space_weather_summary(days: int = 7) -> SpaceWeatherSummary:
+    """Aggregate the last N days of space-weather data for the journal."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    (SELECT max(value) FROM space_weather
+                     WHERE metric = 'kp' AND ts >= NOW() - make_interval(days => %(days)s)),
+                    (SELECT ts FROM space_weather
+                     WHERE metric = 'kp' AND ts >= NOW() - make_interval(days => %(days)s)
+                     ORDER BY value DESC, ts DESC LIMIT 1),
+                    (SELECT count(*) FROM space_weather
+                     WHERE metric = 'kp' AND value >= 5
+                       AND ts >= NOW() - make_interval(days => %(days)s)),
+                    (SELECT avg(value) FROM space_weather
+                     WHERE metric = 'sw_speed' AND ts >= NOW() - make_interval(days => %(days)s)),
+                    (SELECT max(value) FROM space_weather
+                     WHERE metric = 'sw_speed' AND ts >= NOW() - make_interval(days => %(days)s)),
+                    (SELECT min(value) FROM space_weather
+                     WHERE metric = 'bz' AND ts >= NOW() - make_interval(days => %(days)s))
+                """,
+                {"days": days},
+            )
+            row = cur.fetchone()
+            return SpaceWeatherSummary(
+                max_kp=row[0],
+                max_kp_at=row[1],
+                storm_intervals=row[2] or 0,
+                avg_sw_speed=row[3],
+                max_sw_speed=row[4],
+                min_bz=row[5],
+            )
 
 
 def insert_measurements(measurements: list[SpaceWeatherMeasurement]) -> int:
