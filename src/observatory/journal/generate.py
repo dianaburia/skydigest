@@ -10,9 +10,12 @@ import json
 import logging
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import date
+from pathlib import Path
 
 import anthropic
+from jinja2 import Environment, FileSystemLoader
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
@@ -41,6 +44,9 @@ You never invent facts: every claim comes from the numbered sources you are
 given, and you cite them by number. You respond with valid JSON only."""
 
 
+CACHE_PATH = Path("output/issue-latest.json")
+
+
 @dataclass
 class NumberedSource:
     number: int
@@ -49,6 +55,7 @@ class NumberedSource:
     title: str
     url: str
     snippet: str
+    image_url: str | None = None
 
 
 def _clean_text(raw: str | None, limit: int = SNIPPET_LEN) -> str:
@@ -74,6 +81,7 @@ def build_sources(
                 title=article.title,
                 url=article.url,
                 snippet=_clean_text(article.summary or article.content),
+                image_url=article.image_url,
             )
         )
     for paper in papers:
@@ -214,12 +222,77 @@ def generate_issue(days: int = 7) -> dict | None:
     return {"issue": issue, "sources": sources}
 
 
+def _cited_sources(
+    issue: dict, sources: dict[int, NumberedSource]
+) -> list[NumberedSource]:
+    """Collect the sources actually cited in the issue, sorted by number."""
+    cited: set[int] = set()
+    for block in issue["main_events"] + issue["arxiv_picks"]:
+        cited.update(block["source_ids"])
+    cited.add(issue["photo_of_week"]["source_id"])
+    return [sources[n] for n in sorted(cited) if n in sources]
+
+
+def render_html(result: dict) -> str:
+    """Render the issue to an HTML string (no file I/O)."""
+    env = Environment(loader=FileSystemLoader("templates"), autoescape=True)
+    template = env.get_template("journal.html")
+    issue = result["issue"]
+    sources = {s.number: s for s in result["sources"]}
+    html = template.render(
+        issue=issue,
+        sources=sources,
+        issue_date=date.today().strftime("%B %d, %Y"),
+        cited=_cited_sources(issue, sources),
+    )
+    return html
+
+
+def save_html(result: dict) -> str:
+    """Render and write output/issue-YYYY-MM-DD.html. Returns the file path."""
+    html = render_html(result)
+    Path("output").mkdir(exist_ok=True)
+    path = Path("output") / f"issue-{date.today().isoformat()}.html"
+    path.write_text(html, encoding="utf-8")
+    return str(path)
+
+
+def _save_cache(result: dict) -> None:
+    """Save the generated issue so --reuse can re-render without an API call."""
+    CACHE_PATH.parent.mkdir(exist_ok=True)
+    payload = {
+        "issue": result["issue"],
+        "sources": [asdict(s) for s in result["sources"]],
+    }
+    CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_cache() -> dict | None:
+    """Load the last generated issue, or None if there is no cache yet."""
+    if not CACHE_PATH.exists():
+        return None
+    payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    return {
+        "issue": payload["issue"],
+        "sources": [NumberedSource(**d) for d in payload["sources"]],
+    }
+
+
 def main() -> int:
     setup_logging()
-    result = generate_issue()
+    reuse = "--reuse" in sys.argv
+    if reuse:
+        result = _load_cache()
+        if result is None:
+            print("No cached issue found. Run once without --reuse first.", file=sys.stderr)
+            return 1
+    else:
+        result = generate_issue()
     if result is None:
         print("Failed to generate the issue (see errors above).", file=sys.stderr)
         return 1
+    if not reuse:
+        _save_cache(result)
 
     issue = result["issue"]
     sources = {s.number: s for s in result["sources"]}
@@ -252,13 +325,12 @@ def main() -> int:
     print(f"{photo['caption']} {cite([photo['source_id']])}")
     print()
     print("--- SOURCES CITED ---")
-    cited: set[int] = set()
-    for event in issue["main_events"] + issue["arxiv_picks"]:
-        cited.update(event["source_ids"])
-    cited.add(issue["photo_of_week"]["source_id"])
-    for num in sorted(cited):
-        if num in sources:
-            print(f"[{num}] {sources[num].title}\n     {sources[num].url}")
+    for s in _cited_sources(issue, sources):
+        print(f"[{s.number}] {s.title}\n     {s.url}")
+
+    path = save_html(result)
+    print()
+    print(f"HTML saved to: {path}")
     return 0
 
 

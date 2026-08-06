@@ -42,7 +42,10 @@ def fetch_apod() -> dict[str, Any] | None:
 
     day = date.fromisoformat(data["date"])
     article_url = _apod_page_url(day)
-    image_url = data.get("hdurl") or data.get("url")
+    if data.get("media_type") == "image":
+        image_url = data.get("hdurl") or data.get("url")
+    else:
+        image_url = None
 
     inserted = insert_article(
         Article(

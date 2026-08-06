@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 
 import pytest
 
-from observatory.journal.generate import _extract_json, build_sources
+from observatory.journal.generate import (
+    NumberedSource,
+    _extract_json,
+    build_sources,
+    render_html,
+)
 from observatory.repository import Article, Paper
 
 
@@ -45,3 +50,42 @@ def test_extract_json_with_code_fences():
 def test_extract_json_garbage_raises():
     with pytest.raises(Exception):
         _extract_json("not json at all")
+
+
+FAKE_ISSUE = {
+    "title": "Test Issue",
+    "intro": "Welcome to the test.",
+    "main_events": [{"heading": "Big event", "text": "It happened.", "source_ids": [1]}],
+    "arxiv_picks": [{"heading": "Cool paper", "text": "Science.", "source_ids": [2]}],
+    "space_weather_summary": "Quiet week.",
+    "photo_of_week": {"source_id": 1, "caption": "Nice photo."},
+}
+
+
+def test_render_html_produces_page():
+    result = {
+        "issue": FAKE_ISSUE,
+        "sources": [
+            NumberedSource(
+                number=1,
+                kind="article",
+                source="apod",
+                title="APOD article",
+                url="https://apod.nasa.gov/apod/ap260806.html",
+                snippet="A photo.",
+                image_url="https://apod.nasa.gov/image/helix.jpg",
+            ),
+            NumberedSource(
+                number=2,
+                kind="paper",
+                source="arxiv",
+                title="Some paper",
+                url="https://arxiv.org/abs/2608.00001",
+                snippet="An abstract.",
+            ),
+        ],
+    }
+    html = render_html(result)
+    assert "Test Issue" in html
+    assert "https://apod.nasa.gov/apod/ap260806.html" in html
+    assert "<img" in html  # source 1 has an image_url, so the photo block renders
