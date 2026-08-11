@@ -278,3 +278,39 @@ def list_unindexed_papers() -> list[Paper]:
                 """
             )
             return [Paper(*row) for row in cur.fetchall()]
+
+
+@dataclass
+class RetrievedChunk:
+    doc_type: str  # 'article' | 'paper'
+    doc_id: str
+    content: str
+    score: float  # cosine distance to the query: 0 = identical, lower is better
+    title: str
+    url: str
+
+
+def search_chunks(embedding: list[float], limit: int = 8) -> list[RetrievedChunk]:
+    """Return the chunks nearest to the given embedding by cosine distance,
+    enriched with the owning document's title and url.
+
+    The ORDER BY embedding <=> query + LIMIT shape is exactly what the HNSW
+    index (vector_cosine_ops) accelerates: a graph walk instead of a scan.
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.doc_type, c.doc_id, c.content,
+                       c.embedding <=> %(q)s AS score,
+                       COALESCE(a.title, p.title) AS title,
+                       COALESCE(a.url, p.url) AS url
+                FROM chunks c
+                LEFT JOIN articles a ON c.doc_type = 'article' AND a.id::text = c.doc_id
+                LEFT JOIN papers  p ON c.doc_type = 'paper'   AND p.arxiv_id = c.doc_id
+                ORDER BY c.embedding <=> %(q)s
+                LIMIT %(limit)s
+                """,
+                {"q": str(embedding), "limit": limit},
+            )
+            return [RetrievedChunk(*row) for row in cur.fetchall()]
