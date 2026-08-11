@@ -24,6 +24,7 @@ class Article:
     content: str | None = None
     image_url: str | None = None
     published_at: datetime | None = None
+    id: int | None = None  # assigned by the database; None until inserted
 
 
 _INSERT_ARTICLE_SQL = """
@@ -31,6 +32,8 @@ _INSERT_ARTICLE_SQL = """
     VALUES (%(source)s, %(url)s, %(title)s, %(summary)s, %(content)s, %(image_url)s, %(published_at)s)
     ON CONFLICT (url) DO NOTHING
 """
+
+_ARTICLE_COLUMNS = "source, url, title, summary, content, image_url, published_at, id"
 
 
 def insert_articles(articles: list[Article]) -> int:
@@ -103,8 +106,8 @@ def list_recent_articles(days: int = 7) -> list[Article]:
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT source, url, title, summary, content, image_url, published_at
+                f"""
+                SELECT {_ARTICLE_COLUMNS}
                 FROM articles
                 WHERE COALESCE(published_at, created_at) >= NOW() - make_interval(days => %(days)s)
                 ORDER BY COALESCE(published_at, created_at) DESC
@@ -208,3 +211,70 @@ def insert_measurements(measurements: list[SpaceWeatherMeasurement]) -> int:
                 cur.execute(_INSERT_MEASUREMENT_SQL, asdict(m))
                 total += cur.rowcount
     return total
+
+
+@dataclass
+class Chunk:
+    doc_type: str  # 'article' | 'paper'
+    doc_id: str  # str(articles.id) or papers.arxiv_id
+    chunk_index: int
+    content: str
+    embedding: list[float]
+
+
+_INSERT_CHUNK_SQL = """
+    INSERT INTO chunks (doc_type, doc_id, chunk_index, content, embedding)
+    VALUES (%(doc_type)s, %(doc_id)s, %(chunk_index)s, %(content)s, %(embedding)s)
+    ON CONFLICT (doc_type, doc_id, chunk_index) DO NOTHING
+"""
+
+
+def insert_chunks(chunks: list[Chunk]) -> int:
+    """Insert a batch of chunks atomically. Returns the count of new rows."""
+    if not chunks:
+        return 0
+    total = 0
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for chunk in chunks:
+                params = asdict(chunk)
+                # pgvector accepts a vector literal in its string form '[0.1, 0.2, ...]'
+                params["embedding"] = str(chunk.embedding)
+                cur.execute(_INSERT_CHUNK_SQL, params)
+                total += cur.rowcount
+    return total
+
+
+def list_unindexed_articles() -> list[Article]:
+    """Articles that do not have any chunks yet."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT {_ARTICLE_COLUMNS}
+                FROM articles a
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM chunks c
+                    WHERE c.doc_type = 'article' AND c.doc_id = a.id::text
+                )
+                """
+            )
+            return [Article(*row) for row in cur.fetchall()]
+
+
+def list_unindexed_papers() -> list[Paper]:
+    """Papers that do not have any chunks yet."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT arxiv_id, title, abstract, authors, categories, url,
+                       published_at, pdf_url, updated_at
+                FROM papers p
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM chunks c
+                    WHERE c.doc_type = 'paper' AND c.doc_id = p.arxiv_id
+                )
+                """
+            )
+            return [Paper(*row) for row in cur.fetchall()]
