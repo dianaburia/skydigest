@@ -1,0 +1,62 @@
+{
+  "_comment": "Labeled evaluation set for the RAG pipeline. Canonical source for questions and expectations; human notes and check history live in the private EVAL.md. 'require': 'any' = hit if at least one expected doc is in top-8; 'all' = every listed doc must be found. Articles are identified by url, papers by arxiv_id.",
+  "retrieval": [
+    {
+      "id": 1,
+      "question": "what is new about exoplanets?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://skyandtelescope.org/astronomy-news/new-contender-for-exomoon-title-elicits-skepticism/"},
+        {"doc_type": "article", "url": "https://www.universetoday.com/articles/finding-venus-zone-planets-with-plato-will-show-us-how-habitable-planets-evolve"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-07-venus-zone-planets-plato-habitable.html"}
+      ]
+    },
+    {
+      "id": 2,
+      "question": "aurora forecast and geomagnetic storms",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-07-deep-space-cubesat-solar-storm.html"}
+      ]
+    },
+    {
+      "id": 3,
+      "question": "how do coronal mass ejections interact with the solar wind?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "paper", "arxiv_id": "2608.01621"}
+      ]
+    },
+    {
+      "id": 4,
+      "question": "what has the Rubin Observatory discovered so far?",
+      "require": "all",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-rubin-observatory-deep-window-famous.html"},
+        {"doc_type": "paper", "arxiv_id": "2608.02601"}
+      ]
+    },
+    {
+      "id": 5,
+      "question": "can a thermal camera improve gravitational wave detectors?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://www.universetoday.com/articles/a-thermal-camera-trick-could-let-ligo-see-twice-as-far"}
+      ]
+    }
+  ],
+  "abstention": [
+    {
+      "id": "A1",
+      "question": "when will the next total solar eclipse be visible from Ukraine?",
+      "mode": "partial",
+      "_note": "Corpus covers 2026/2027 eclipses but nothing about Ukraine visibility: the answer should say it does not know about Ukraine while summarizing what the sources do cover."
+    },
+    {
+      "id": "A2",
+      "question": "what did Elon Musk say about the Mars colony budget this week?",
+      "mode": "full",
+      "_note": "Nothing remotely relevant in the corpus: expect a clean refusal with no sources cited."
+    }
+  ]
+}
