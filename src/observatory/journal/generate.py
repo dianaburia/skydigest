@@ -19,6 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
+from observatory.text import clean_text
 from observatory.repository import (
     Article,
     Paper,
@@ -59,12 +60,8 @@ class NumberedSource:
 
 
 def _clean_text(raw: str | None, limit: int = SNIPPET_LEN) -> str:
-    """Strip HTML tags and collapse whitespace, then truncate."""
-    if not raw:
-        return ""
-    text = re.sub(r"<[^>]+>", " ", raw)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text[:limit]
+    """Strip HTML and truncate for prompt snippets (shared impl in text.py)."""
+    return clean_text(raw, limit=limit)
 
 
 def build_sources(

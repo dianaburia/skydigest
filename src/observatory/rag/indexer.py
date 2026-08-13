@@ -16,6 +16,7 @@ import sys
 from observatory.infra.logging_setup import setup_logging
 from observatory.rag.chunking import chunk_text
 from observatory.rag.embeddings import embed_texts
+from observatory.text import clean_text
 from observatory.repository import (
     Article,
     Chunk,
@@ -33,8 +34,8 @@ EMBED_BATCH_SIZE = 64
 
 
 def _article_text(article: Article) -> str:
-    """Text to index for an article: title + best available body."""
-    body = article.content or article.summary or ""
+    """Text to index for an article: title + best available body, HTML stripped."""
+    body = clean_text(article.content or article.summary)
     return f"{article.title}\n\n{body}".strip()
 
 
