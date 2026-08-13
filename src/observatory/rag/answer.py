@@ -114,7 +114,8 @@ def answer(question: str) -> dict | None:
     return {"answer": response.content[0].text, "sources": sources}
 
 
-def _cited_numbers(answer_text: str) -> set[int]:
+def cited_numbers(answer_text: str) -> set[int]:
+    """Source numbers actually cited in an answer, e.g. {1, 3} from '[1] ... [3]'."""
     return {int(n) for n in re.findall(r"\[(\d+)\]", answer_text)}
 
 
@@ -133,7 +134,7 @@ def main() -> int:
     print()
     print(result["answer"])
     print()
-    cited = _cited_numbers(result["answer"])
+    cited = cited_numbers(result["answer"])
     if cited:
         print("Sources:")
         for s in result["sources"]:
