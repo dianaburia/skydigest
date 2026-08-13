@@ -57,6 +57,12 @@
       "question": "what did Elon Musk say about the Mars colony budget this week?",
       "mode": "full",
       "_note": "Nothing remotely relevant in the corpus: expect a clean refusal with no sources cited."
+    },
+    {
+      "id": "A3",
+      "question": "what telescope to choose in 2026 for beginner?",
+      "mode": "full",
+      "_note": "Intent-mismatch case: the corpus is full of telescope documents (Roman, LBT, iLocater) so retrieval scores look fine, but they are science news, not buying advice. Expect a refusal that may legitimately cite sources when explaining what the corpus does cover."
     }
   ]
 }
