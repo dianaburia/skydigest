@@ -37,6 +37,7 @@ dist/
 # Private project docs (not for public repo)
 CLAUDE.md
 PHASE1_STEPS.md
+PHASE2_STEPS.md
 IDEAS.md
 REFACTORING_PLAN.md
 EVAL.md

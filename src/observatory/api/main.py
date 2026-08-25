@@ -10,10 +10,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from observatory.infra.logging_setup import setup_logging
+from observatory.repository import get_latest_issue
 from observatory.rag.answer import answer, cited_numbers
 from observatory.rag.embeddings import embed_texts
 
@@ -74,6 +75,24 @@ def ask(request: AskRequest) -> AskResponse:
     return AskResponse(answer=result["answer"], sources=sources)
 
 
+NO_ISSUE_PAGE = """<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Observatory</title></head>
+<body style="font-family: Georgia, serif; text-align: center; padding-top: 4rem;">
+<h1>Observatory</h1>
+<p>The first weekly issue hasn't been generated yet — check back on Saturday.</p>
+<p><a href="/chat">Meanwhile, ask the archive anything →</a></p>
+</body></html>"""
+
+
 @app.get("/")
-def index() -> FileResponse:
+def index() -> HTMLResponse:
+    """The latest journal issue is the front page."""
+    issue = get_latest_issue()
+    if issue is None:
+        return HTMLResponse(NO_ISSUE_PAGE)
+    return HTMLResponse(issue.html)
+
+
+@app.get("/chat")
+def chat() -> FileResponse:
     return FileResponse(CHAT_PAGE)

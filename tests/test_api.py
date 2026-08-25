@@ -13,11 +13,19 @@ def test_health_returns_ok():
     assert response.json() == {"status": "ok"}
 
 
-def test_index_serves_chat_page():
+def test_index_serves_journal_or_fallback():
+    # / is the journal front page: either the latest issue or the
+    # "no issue yet" placeholder — both are HTML mentioning Observatory
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Observatory" in response.text
+
+
+def test_chat_page_served_at_chat():
+    response = client.get("/chat")
+    assert response.status_code == 200
+    assert "Ask the Archive" in response.text
 
 
 def test_ask_rejects_empty_question():

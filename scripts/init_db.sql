@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS space_weather (
 CREATE INDEX IF NOT EXISTS idx_space_weather_metric_ts ON space_weather (metric, ts DESC);
 
 -- ============================================================================
+-- issues: rendered weekly journal issues (self-contained HTML per issue).
+-- Stored in the DB so the web service can serve them: on the cloud platform
+-- the journal generator and the web server run in separate containers with
+-- no shared filesystem.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS issues (
+    issue_date DATE PRIMARY KEY,
+    title      TEXT NOT NULL,
+    html       TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
 -- chunks: text chunks with embeddings for the RAG pipeline
 -- Deduped by (doc_type, doc_id, chunk_index); re-indexing is safe.
 -- ============================================================================

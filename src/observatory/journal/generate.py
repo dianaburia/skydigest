@@ -22,9 +22,11 @@ from observatory.infra.logging_setup import setup_logging
 from observatory.text import clean_text
 from observatory.repository import (
     Article,
+    Issue,
     Paper,
     SpaceWeatherSummary,
     get_space_weather_summary,
+    insert_issue,
     list_recent_articles,
     list_recent_papers,
 )
@@ -246,8 +248,15 @@ def render_html(result: dict) -> str:
 
 
 def save_html(result: dict) -> str:
-    """Render and write output/issue-YYYY-MM-DD.html. Returns the file path."""
+    """Render the issue, store it in the DB, and write the local HTML file.
+
+    The DB row is what the web service serves (separate containers share no
+    filesystem in the cloud); the output/ file remains as a local artifact.
+    Returns the file path."""
     html = render_html(result)
+    insert_issue(
+        Issue(issue_date=date.today(), title=result["issue"]["title"], html=html)
+    )
     Path("output").mkdir(exist_ok=True)
     path = Path("output") / f"issue-{date.today().isoformat()}.html"
     path.write_text(html, encoding="utf-8")

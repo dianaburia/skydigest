@@ -10,7 +10,7 @@ Functions own their own connections; callers do not pass cursors.
 """
 
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import date, datetime
 
 from observatory.infra.db import get_conn
 
@@ -278,6 +278,39 @@ def list_unindexed_papers() -> list[Paper]:
                 """
             )
             return [Paper(*row) for row in cur.fetchall()]
+
+
+@dataclass
+class Issue:
+    issue_date: date
+    title: str
+    html: str
+
+
+def insert_issue(issue: Issue) -> None:
+    """Store a rendered issue; rerunning generation the same day overwrites it."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO issues (issue_date, title, html)
+                VALUES (%(issue_date)s, %(title)s, %(html)s)
+                ON CONFLICT (issue_date) DO UPDATE
+                    SET title = EXCLUDED.title, html = EXCLUDED.html
+                """,
+                asdict(issue),
+            )
+
+
+def get_latest_issue() -> Issue | None:
+    """The most recent issue, or None if nothing has been generated yet."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT issue_date, title, html FROM issues ORDER BY issue_date DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return Issue(*row) if row else None
 
 
 @dataclass
