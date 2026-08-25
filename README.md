@@ -90,7 +90,7 @@ Tests: `uv run pytest` (33 tests: format parsers, chunking boundaries, repositor
 
 ## Roadmap
 
-- **Next up:** GitHub Actions CI with a pgvector service container; a Recall@8/MRR evaluation script over the labeled set; embedding-based deduplication of stories covered by multiple feeds; public deployment of the compose stack to a VPS (with rate limiting before the chat goes public — anonymous questions spend real API credits).
+- **Next up:** GitHub Actions CI with a pgvector service container; a Recall@8/MRR evaluation script over the labeled set; embedding-based deduplication of stories covered by multiple feeds; public deployment on Railway (with rate limiting before the chat goes public — anonymous questions spend real API credits).
 - **Phase 2:** Next.js frontend, agentic chat on LangGraph (re-query loops, source-type routing), an MCP server exposing the archive to any AI client.
 - **Phase 3:** ML on the accumulated space-weather data — an aurora/Kp forecasting model trained on raw L1 time series (the reason those measurements are collected from day one); Airflow; server deployment.
 - **Phase 4:** fine-tuned science-communicator model (LoRA/SFT).
