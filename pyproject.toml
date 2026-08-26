@@ -9,12 +9,19 @@ dependencies = [
     "feedparser>=6.0",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.5",
-    "sentence-transformers>=3.0",
     "anthropic>=0.40",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "apscheduler>=3.10",
     "jinja2>=3.1",
+]
+
+# The embedding model stack (torch, ~2.5 GB) is needed only by services that
+# compute embeddings: the web app (/ask) and the indexer. Collector and
+# journal services install without it for ~300 MB images and fast deploys.
+[project.optional-dependencies]
+ml = [
+    "sentence-transformers>=3.0",
 ]
 
 [dependency-groups]

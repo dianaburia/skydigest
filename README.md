@@ -67,7 +67,7 @@ Prerequisites: Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker. You'll ne
 
 ```bash
 git clone https://github.com/dianaburia/skydigest.git && cd skydigest
-uv sync                                  # installs deps (~800 MB incl. PyTorch)
+uv sync --all-extras                     # installs deps incl. the ml extra (PyTorch, ~800 MB)
 docker compose up -d                     # Postgres+pgvector, schema auto-applied
 cp .env.example .env                     # then put your two API keys inside
 
