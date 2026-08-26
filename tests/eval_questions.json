@@ -43,6 +43,16 @@
       "expected": [
         {"doc_type": "article", "url": "https://www.universetoday.com/articles/a-thermal-camera-trick-could-let-ligo-see-twice-as-far"}
       ]
+    },
+    {
+      "id": 6,
+      "question": "what is the Einstein Probe?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-astronomers-massive-star-death-explosive.html"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-einstein-probe-rare-ray-star.html"}
+      ],
+      "_note": "Definition-style question (first of its kind in the set). Verified live in the cloud chat 2026-08-25: answer wove together 2 papers + 2 articles."
     }
   ],
   "abstention": [
