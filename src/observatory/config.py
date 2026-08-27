@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str
     database_url: str
     embedding_model: str = "BAAI/bge-m3"
+    ask_daily_limit: int = 20  # /ask questions per IP per day (each costs API credits)
 
 
 @lru_cache

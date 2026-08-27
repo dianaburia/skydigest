@@ -7,12 +7,14 @@ the HTTP response.
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
+from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
 from observatory.repository import get_latest_issue
 from observatory.rag.answer import answer, cited_numbers
@@ -32,6 +34,49 @@ async def lifespan(app: FastAPI):
     embed_texts(["warmup"])
     logger.info("Model ready, serving requests.")
     yield
+
+
+class DailyIpRateLimiter:
+    """In-memory per-IP daily counter for the public /ask endpoint.
+
+    Every answered question spends real API credits, so anonymous usage is
+    capped per IP per UTC day. Single-process in-memory state is enough for
+    our one uvicorn worker; counts reset on redeploy, which is acceptable.
+    """
+
+    def __init__(self, limit: int):
+        self.limit = limit
+        self._day = date.today()
+        self._counts: dict[str, int] = {}
+
+    def allow(self, ip: str, today: date | None = None) -> bool:
+        today = today or date.today()
+        if today != self._day:  # new day: drop yesterday's counts entirely
+            self._day = today
+            self._counts = {}
+        used = self._counts.get(ip, 0)
+        if used >= self.limit:
+            return False
+        self._counts[ip] = used + 1
+        return True
+
+
+def _client_ip(request: Request) -> str:
+    """Real client IP behind the platform proxy (first X-Forwarded-For hop)."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+_rate_limiter: DailyIpRateLimiter | None = None
+
+
+def get_rate_limiter() -> DailyIpRateLimiter:
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = DailyIpRateLimiter(limit=get_settings().ask_daily_limit)
+    return _rate_limiter
 
 
 app = FastAPI(title="Observatory", lifespan=lifespan)
@@ -59,8 +104,13 @@ def health() -> dict:
 
 
 @app.post("/ask", response_model=AskResponse)
-def ask(request: AskRequest) -> AskResponse:
-    result = answer(request.question)
+def ask(payload: AskRequest, request: Request) -> AskResponse:
+    if not get_rate_limiter().allow(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily question limit reached ({get_settings().ask_daily_limit}/day). Come back tomorrow!",
+        )
+    result = answer(payload.question)
     if result is None:
         raise HTTPException(
             status_code=502,
