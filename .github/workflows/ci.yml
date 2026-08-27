@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Same image as local dev and production: integration tests run
+        # against a real Postgres+pgvector, no mocks.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: observatory
+          POSTGRES_PASSWORD: observatory
+          POSTGRES_DB: observatory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U observatory -d observatory"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        # --all-extras pulls the ml group: tests import the API app, which
+        # imports the embeddings module (torch install only; the 2 GB model
+        # is never downloaded because no test computes embeddings).
+        run: uv sync --locked --all-extras
+
+      - name: Apply database schema
+        run: PGPASSWORD=observatory psql -h localhost -U observatory -d observatory -f scripts/init_db.sql
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://observatory:observatory@localhost:5432/observatory
+          # Required by config fail-fast validation; no test calls real APIs.
+          NASA_API_KEY: ci-dummy
+          ANTHROPIC_API_KEY: ci-dummy
+        run: uv run pytest -v

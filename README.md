@@ -2,7 +2,7 @@
 
 A personal astronomy aggregator that ingests daily space news, arXiv papers, and space-weather data into a local database, generates a weekly HTML magazine, and answers questions via a RAG chat backed by pgvector.
 
-![Python](https://img.shields.io/badge/python-3.12-blue) ![Tests](https://img.shields.io/badge/tests-33_passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.12-blue) [![CI](https://github.com/dianaburia/skydigest/actions/workflows/ci.yml/badge.svg)](https://github.com/dianaburia/skydigest/actions/workflows/ci.yml)
 
 ---
 
