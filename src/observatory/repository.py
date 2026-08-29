@@ -287,6 +287,12 @@ class Issue:
     html: str
 
 
+@dataclass
+class IssueSummary:
+    issue_date: date
+    title: str
+
+
 def insert_issue(issue: Issue) -> None:
     """Store a rendered issue; rerunning generation the same day overwrites it."""
     with get_conn() as conn:
@@ -308,6 +314,28 @@ def get_latest_issue() -> Issue | None:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT issue_date, title, html FROM issues ORDER BY issue_date DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return Issue(*row) if row else None
+
+
+def list_issues() -> list[IssueSummary]:
+    """All issues, newest first, without the heavy html payload."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT issue_date, title FROM issues ORDER BY issue_date DESC"
+            )
+            return [IssueSummary(*row) for row in cur.fetchall()]
+
+
+def get_issue(issue_date: date) -> Issue | None:
+    """One issue by its date, or None if that date has no issue."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT issue_date, title, html FROM issues WHERE issue_date = %s",
+                (issue_date,),
             )
             row = cur.fetchone()
             return Issue(*row) if row else None

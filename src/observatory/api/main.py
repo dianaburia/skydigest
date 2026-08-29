@@ -11,12 +11,13 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
-from observatory.repository import get_latest_issue
+from observatory.repository import get_issue, get_latest_issue, list_issues
 from observatory.rag.answer import answer, cited_numbers
 from observatory.rag.embeddings import embed_texts
 
@@ -81,6 +82,13 @@ def get_rate_limiter() -> DailyIpRateLimiter:
 
 app = FastAPI(title="Observatory", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
@@ -123,6 +131,34 @@ def ask(payload: AskRequest, request: Request) -> AskResponse:
         if s.number in cited
     ]
     return AskResponse(answer=result["answer"], sources=sources)
+
+
+class IssueSummaryOut(BaseModel):
+    issue_date: date
+    title: str
+
+
+class IssueOut(BaseModel):
+    issue_date: date
+    title: str
+    html: str
+
+
+@app.get("/issues", response_model=list[IssueSummaryOut])
+def issues() -> list[IssueSummaryOut]:
+    """All issues, newest first (metadata only, no html)."""
+    return [
+        IssueSummaryOut(issue_date=i.issue_date, title=i.title) for i in list_issues()
+    ]
+
+
+@app.get("/issues/{issue_date}", response_model=IssueOut)
+def issue_by_date(issue_date: date) -> IssueOut:
+    """One issue by date (YYYY-MM-DD), including its rendered html."""
+    issue = get_issue(issue_date)
+    if issue is None:
+        raise HTTPException(status_code=404, detail=f"No issue for {issue_date}.")
+    return IssueOut(issue_date=issue.issue_date, title=issue.title, html=issue.html)
 
 
 NO_ISSUE_PAGE = """<!DOCTYPE html>

@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str
     embedding_model: str = "BAAI/bge-m3"
     ask_daily_limit: int = 20  # /ask questions per IP per day (each costs API credits)
+    cors_origins: list[str] = ["http://localhost:3000"]  # frontends allowed to call the API
 
 
 @lru_cache
