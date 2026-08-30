@@ -1,0 +1,143 @@
+:root {
+  --background: #fdfcf9;
+  --foreground: #1c1c1c;
+  --muted: #6b6b6b;
+  --accent: #2a4d8f;
+  --border: #e3e0d8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #12121a;
+    --foreground: #e8e6e1;
+    --muted: #9a99a3;
+    --accent: #8fb0e8;
+    --border: #2c2c38;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Georgia, "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Archive (front page) */
+
+.archive {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.archive h1 {
+  font-size: 2.5rem;
+  font-weight: normal;
+  letter-spacing: 0.02em;
+}
+
+.tagline {
+  color: var(--muted);
+  margin-top: 0.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.issue-list {
+  list-style: none;
+}
+
+.issue-list li {
+  border-top: 1px solid var(--border);
+}
+
+.issue-list li:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-list a {
+  display: block;
+  padding: 1.1rem 0.25rem;
+  color: inherit;
+}
+
+.issue-list a:hover {
+  text-decoration: none;
+  background: rgba(128, 128, 128, 0.07);
+}
+
+.issue-date {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.issue-title {
+  display: block;
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+
+/* Single issue page */
+
+.issue-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.issue-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-header a {
+  white-space: nowrap;
+}
+
+.issue-header-title {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+}
