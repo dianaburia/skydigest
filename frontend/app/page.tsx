@@ -23,9 +23,10 @@ export default async function HomePage() {
       <header className="issue-header">
         <span className="brand">Observatory</span>
         <span className="issue-header-title">{latest.title}</span>
-        <Link className="archive-link" href="/issues">
-          Past issues →
-        </Link>
+        <nav className="header-nav">
+          <Link href="/issues">Past issues</Link>
+          <Link href="/chat">Ask the archive</Link>
+        </nav>
       </header>
       <iframe className="issue-frame" srcDoc={latest.html} title={latest.title} />
     </div>

@@ -10,7 +10,8 @@ export default async function ArchivePage() {
     <main className="archive">
       <h1>Observatory</h1>
       <p className="tagline">
-        All issues, newest first. <Link href="/">Latest issue →</Link>
+        All issues, newest first. <Link href="/">Latest issue →</Link>{" "}
+        <Link href="/chat">Ask the archive →</Link>
       </p>
       {issues.length === 0 ? (
         <p className="empty">No issues yet — the first one arrives on Saturday.</p>

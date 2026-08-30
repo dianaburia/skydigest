@@ -32,6 +32,39 @@ export async function getIssue(date: string): Promise<Issue | null> {
   return res.json();
 }
 
+export interface Source {
+  number: number;
+  title: string;
+  url: string;
+  doc_type: string; // 'article' | 'paper'
+}
+
+export interface AskResponse {
+  answer: string;
+  sources: Source[];
+}
+
+// Called from the browser (the chat is a client component), so API errors
+// are surfaced as readable messages (e.g. the daily rate-limit text).
+export async function askQuestion(question: string): Promise<AskResponse> {
+  const res = await fetch(`${API_URL}/ask`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+  if (!res.ok) {
+    let detail = `The archive could not answer (error ${res.status}). Try again later.`;
+    try {
+      const data = await res.json();
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch {
+      // keep the generic message
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export function formatIssueDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     year: "numeric",
