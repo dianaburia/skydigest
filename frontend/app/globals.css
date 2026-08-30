@@ -176,8 +176,36 @@ a:hover {
   padding: 0.7rem 1rem;
   border-radius: 10px;
   max-width: 85%;
-  white-space: pre-wrap;
   line-height: 1.45;
+}
+
+/* User questions and errors are plain text; bot answers are markdown,
+   where paragraph spacing comes from the elements themselves. */
+.bubble-user,
+.bubble-error {
+  white-space: pre-wrap;
+}
+
+.bubble-bot p,
+.bubble-bot ul,
+.bubble-bot ol {
+  margin: 0 0 0.6rem;
+}
+
+.bubble-bot > :last-child {
+  margin-bottom: 0;
+}
+
+.bubble-bot h1,
+.bubble-bot h2,
+.bubble-bot h3 {
+  font-size: 1.05rem;
+  margin: 0.5rem 0;
+}
+
+.bubble-bot ul,
+.bubble-bot ol {
+  padding-left: 1.25rem;
 }
 
 .bubble-user {

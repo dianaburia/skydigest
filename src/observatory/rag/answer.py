@@ -9,6 +9,7 @@ to say "I don't know" when the sources don't cover the question.
 import logging
 import re
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 import anthropic
@@ -112,6 +113,70 @@ def answer(question: str) -> dict | None:
         return None
 
     return {"answer": response.content[0].text, "sources": sources}
+
+
+@dataclass
+class StreamDelta:
+    """A piece of answer text, emitted as the model generates it."""
+
+    text: str
+
+
+@dataclass
+class StreamSources:
+    """Final event of a successful stream: the sources the answer cited."""
+
+    sources: list[GroupedSource]
+
+
+@dataclass
+class StreamError:
+    """Terminal event when retrieval or generation failed."""
+
+    detail: str
+
+
+StreamEvent = StreamDelta | StreamSources | StreamError
+
+
+def answer_stream(question: str) -> Iterator[StreamEvent]:
+    """Same chain as answer(), but yields the answer text incrementally.
+
+    Yields StreamDelta events while the model generates, then one
+    StreamSources with the cited sources; StreamError is terminal.
+    """
+    chunks = retrieve(question, top_k=TOP_K)
+    if not chunks:
+        logger.error("Retrieval returned no chunks — is the index empty?")
+        yield StreamError(detail="The archive returned nothing; try again later.")
+        return
+    sources = group_sources(chunks)
+    logger.info(
+        "Question retrieved %d chunks across %d documents (best score %.3f)",
+        len(chunks),
+        len(sources),
+        sources[0].best_score,
+    )
+
+    client = anthropic.Anthropic(api_key=get_settings().anthropic_api_key)
+    parts: list[str] = []
+    try:
+        with client.messages.stream(
+            model=MODEL,
+            max_tokens=MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": build_prompt(question, sources)}],
+        ) as stream:
+            for text in stream.text_stream:
+                parts.append(text)
+                yield StreamDelta(text=text)
+    except anthropic.APIError as e:
+        logger.error("Anthropic API call failed: %s", e)
+        yield StreamError(detail="Failed to generate an answer; try again later.")
+        return
+
+    cited = cited_numbers("".join(parts))
+    yield StreamSources(sources=[s for s in sources if s.number in cited])
 
 
 def cited_numbers(answer_text: str) -> set[int]:

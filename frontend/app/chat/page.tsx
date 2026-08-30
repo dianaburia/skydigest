@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { askQuestion, Source } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
+import { askQuestionStream, Source } from "@/lib/api";
 
 interface ChatMessage {
   role: "user" | "bot" | "error";
@@ -27,12 +28,23 @@ export default function ChatPage() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: question }]);
     setLoading(true);
+
+    // Grow the last bot bubble in place as pieces of the answer stream in;
+    // the bubble is created on the first piece (until then "Thinking…" shows).
+    const updateLast = (patch: (last: ChatMessage) => ChatMessage) =>
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last.role !== "bot") {
+          return [...prev, patch({ role: "bot", text: "" })];
+        }
+        return [...prev.slice(0, -1), patch(last)];
+      });
+
     try {
-      const res = await askQuestion(question);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", text: res.answer, sources: res.sources },
-      ]);
+      await askQuestionStream(question, {
+        onDelta: (text) => updateLast((last) => ({ ...last, text: last.text + text })),
+        onSources: (sources) => updateLast((last) => ({ ...last, sources })),
+      });
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -65,7 +77,7 @@ export default function ChatPage() {
         )}
         {messages.map((m, i) => (
           <div key={i} className={`bubble bubble-${m.role}`}>
-            {m.text}
+            {m.role === "bot" ? <ReactMarkdown>{m.text}</ReactMarkdown> : m.text}
             {m.sources && m.sources.length > 0 && (
               <ul className="bubble-sources">
                 {m.sources.map((s) => (
@@ -79,7 +91,7 @@ export default function ChatPage() {
             )}
           </div>
         ))}
-        {loading && (
+        {loading && messages[messages.length - 1]?.role === "user" && (
           <div className="bubble bubble-bot bubble-thinking">Thinking…</div>
         )}
         <div ref={bottomRef} />

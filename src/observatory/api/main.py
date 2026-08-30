@@ -5,20 +5,28 @@ endpoints validate HTTP input, call the existing rag functions, and shape
 the HTTP response.
 """
 
+import json
 import logging
+from collections.abc import Iterator
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
 from observatory.repository import get_issue, get_latest_issue, list_issues
-from observatory.rag.answer import answer, cited_numbers
+from observatory.rag.answer import (
+    StreamDelta,
+    StreamSources,
+    answer,
+    answer_stream,
+    cited_numbers,
+)
 from observatory.rag.embeddings import embed_texts
 
 logger = logging.getLogger(__name__)
@@ -131,6 +139,43 @@ def ask(payload: AskRequest, request: Request) -> AskResponse:
         if s.number in cited
     ]
     return AskResponse(answer=result["answer"], sources=sources)
+
+
+@app.post("/ask/stream")
+def ask_stream(payload: AskRequest, request: Request) -> StreamingResponse:
+    """Streaming variant of /ask: Server-Sent Events with the answer text
+    arriving in pieces, then the cited sources, then a done marker."""
+    if not get_rate_limiter().allow(_client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily question limit reached ({get_settings().ask_daily_limit}/day). Come back tomorrow!",
+        )
+
+    def sse_events() -> Iterator[str]:
+        for event in answer_stream(payload.question):
+            if isinstance(event, StreamDelta):
+                data = {"type": "delta", "text": event.text}
+            elif isinstance(event, StreamSources):
+                data = {
+                    "type": "sources",
+                    "sources": [
+                        SourceOut(
+                            number=s.number, title=s.title, url=s.url, doc_type=s.doc_type
+                        ).model_dump()
+                        for s in event.sources
+                    ],
+                }
+            else:  # StreamError
+                data = {"type": "error", "detail": event.detail}
+            yield f"data: {json.dumps(data)}\n\n"
+        yield 'data: {"type": "done"}\n\n'
+
+    return StreamingResponse(
+        sse_events(),
+        media_type="text/event-stream",
+        # Ask proxies not to buffer, so pieces reach the browser immediately.
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class IssueSummaryOut(BaseModel):

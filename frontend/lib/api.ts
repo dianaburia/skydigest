@@ -65,6 +65,61 @@ export async function askQuestion(question: string): Promise<AskResponse> {
   return res.json();
 }
 
+export interface StreamCallbacks {
+  onDelta: (text: string) => void;
+  onSources: (sources: Source[]) => void;
+}
+
+// Streaming variant of askQuestion: the answer arrives in pieces via
+// Server-Sent Events. Falls back to the non-streaming /ask when the
+// streaming endpoint is not available (e.g. mid-deploy).
+export async function askQuestionStream(
+  question: string,
+  callbacks: StreamCallbacks,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/ask/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+  if (res.status === 404 || !res.body) {
+    const full = await askQuestion(question);
+    callbacks.onDelta(full.answer);
+    callbacks.onSources(full.sources);
+    return;
+  }
+  if (!res.ok) {
+    let detail = `The archive could not answer (error ${res.status}). Try again later.`;
+    try {
+      const data = await res.json();
+      if (typeof data.detail === "string") detail = data.detail;
+    } catch {
+      // keep the generic message
+    }
+    throw new Error(detail);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    // SSE events are separated by a blank line; the tail may be incomplete.
+    const events = buffer.split("\n\n");
+    buffer = events.pop() ?? "";
+    for (const event of events) {
+      if (!event.startsWith("data: ")) continue;
+      const data = JSON.parse(event.slice("data: ".length));
+      if (data.type === "delta") callbacks.onDelta(data.text);
+      else if (data.type === "sources") callbacks.onSources(data.sources);
+      else if (data.type === "error") throw new Error(data.detail);
+      else if (data.type === "done") return;
+    }
+  }
+}
+
 export function formatIssueDate(date: string): string {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
     year: "numeric",
