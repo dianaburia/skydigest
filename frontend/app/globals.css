@@ -135,6 +135,17 @@ a:hover {
   white-space: nowrap;
 }
 
+.brand {
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.archive-link {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .issue-frame {
   flex: 1;
   width: 100%;

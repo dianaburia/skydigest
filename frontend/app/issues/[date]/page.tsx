@@ -14,7 +14,7 @@ export default async function IssuePage(props: PageProps<"/issues/[date]">) {
   return (
     <div className="issue-page">
       <header className="issue-header">
-        <Link href="/">← All issues</Link>
+        <Link href="/issues">← All issues</Link>
         <span className="issue-header-title">{issue.title}</span>
       </header>
       <iframe className="issue-frame" srcDoc={issue.html} title={issue.title} />
