@@ -1,4 +1,5 @@
 import Link from "next/link";
+import IssueViewer from "@/components/IssueViewer";
 import { getIssue, getIssues } from "@/lib/api";
 
 // Render on every request: a new issue lands weekly and the front page
@@ -28,7 +29,7 @@ export default async function HomePage() {
           <Link href="/chat">Ask the archive</Link>
         </nav>
       </header>
-      <iframe className="issue-frame" srcDoc={latest.html} title={latest.title} />
+      <IssueViewer html={latest.html} title={latest.title} />
     </div>
   );
 }

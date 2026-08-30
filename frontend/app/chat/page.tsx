@@ -1,20 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { askQuestionStream, Source } from "@/lib/api";
 
 interface ChatMessage {
   role: "user" | "bot" | "error";
   text: string;
+  context?: string; // highlighted issue passage this question was about
   sources?: Source[];
 }
 
+// useSearchParams needs a Suspense boundary on a prerendered page.
 export default function ChatPage() {
+  return (
+    <Suspense>
+      <Chat />
+    </Suspense>
+  );
+}
+
+function Chat() {
+  // Highlight-to-ask lands here as /chat?context=<selected text>.
+  const searchParams = useSearchParams();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [context, setContext] = useState<string | null>(
+    () => searchParams.get("context"),
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,8 +41,18 @@ export default function ChatPage() {
     e.preventDefault();
     const question = input.trim();
     if (!question || loading) return;
+    // With a highlighted passage attached, the API gets passage + question
+    // in one string; the passage's own wording is a strong retrieval key.
+    const fullQuestion = context
+      ? `Regarding this passage from the journal: "${context}"\n\n${question}`
+      : question;
+
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", text: question }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", text: question, context: context ?? undefined },
+    ]);
+    setContext(null); // the context is one-shot
     setLoading(true);
 
     // Grow the last bot bubble in place as pieces of the answer stream in;
@@ -41,7 +67,7 @@ export default function ChatPage() {
       });
 
     try {
-      await askQuestionStream(question, {
+      await askQuestionStream(fullQuestion, {
         onDelta: (text) => updateLast((last) => ({ ...last, text: last.text + text })),
         onSources: (sources) => updateLast((last) => ({ ...last, sources })),
       });
@@ -77,6 +103,7 @@ export default function ChatPage() {
         )}
         {messages.map((m, i) => (
           <div key={i} className={`bubble bubble-${m.role}`}>
+            {m.context && <blockquote className="bubble-quote">{m.context}</blockquote>}
             {m.role === "bot" ? <ReactMarkdown>{m.text}</ReactMarkdown> : m.text}
             {m.sources && m.sources.length > 0 && (
               <ul className="bubble-sources">
@@ -96,11 +123,27 @@ export default function ChatPage() {
         )}
         <div ref={bottomRef} />
       </div>
+      {context && (
+        <div className="context-chip">
+          <span className="context-chip-text">Asking about: “{context}”</span>
+          <button
+            type="button"
+            aria-label="Remove context"
+            onClick={() => setContext(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       <form className="chat-input" onSubmit={handleSubmit}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. What is the Einstein Probe?"
+          placeholder={
+            context
+              ? "e.g. Tell me more about this"
+              : "e.g. What is the Einstein Probe?"
+          }
           maxLength={500}
           autoFocus
         />

@@ -99,7 +99,9 @@ app.add_middleware(
 
 
 class AskRequest(BaseModel):
-    question: str = Field(min_length=1, max_length=500)
+    # Long enough for a question plus a highlighted issue passage
+    # (highlight-to-ask sends both in one string).
+    question: str = Field(min_length=1, max_length=1000)
 
 
 class SourceOut(BaseModel):

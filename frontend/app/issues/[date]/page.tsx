@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import IssueViewer from "@/components/IssueViewer";
 import { getIssue } from "@/lib/api";
 
 export default async function IssuePage(props: PageProps<"/issues/[date]">) {
@@ -17,7 +18,7 @@ export default async function IssuePage(props: PageProps<"/issues/[date]">) {
         <Link href="/issues">← All issues</Link>
         <span className="issue-header-title">{issue.title}</span>
       </header>
-      <iframe className="issue-frame" srcDoc={issue.html} title={issue.title} />
+      <IssueViewer html={issue.html} title={issue.title} />
     </div>
   );
 }
