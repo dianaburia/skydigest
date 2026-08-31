@@ -1,4 +1,4 @@
-# Observatory
+# Skydigest
 
 A personal astronomy aggregator that ingests daily space news, arXiv papers, and space-weather data into a local database, generates a weekly HTML magazine, and answers questions via a RAG chat backed by pgvector.
 
@@ -8,7 +8,7 @@ A personal astronomy aggregator that ingests daily space news, arXiv papers, and
 
 I wanted two things: a weekly astronomy digest that reads like a magazine instead of a firehose of feeds, and the ability to ask "what's new about exoplanets?" and get an answer grounded in real sources — not a hallucination.
 
-So Observatory ingests five space-news feeds, arXiv astro-ph papers, NASA's Astronomy Picture of the Day, and NOAA solar-wind measurements into Postgres every day. Once a week an LLM acts as the magazine editor: it reads the entire week, picks the top stories, explains a few papers in plain words, summarizes space weather, and renders a self-contained HTML issue where **every claim links to its source**. The same archive powers a RAG chat that cites sources by number — and honestly says "I don't know" when the corpus doesn't cover a question.
+So Skydigest ingests five space-news feeds, arXiv astro-ph papers, NASA's Astronomy Picture of the Day, and NOAA solar-wind measurements into Postgres every day. Once a week an LLM acts as the magazine editor: it reads the entire week, picks the top stories, explains a few papers in plain words, summarizes space weather, and renders a self-contained HTML issue where **every claim links to its source**. The same archive powers a RAG chat that cites sources by number — and honestly says "I don't know" when the corpus doesn't cover a question.
 
 *Live demo coming with the VPS deployment — see Roadmap. Until then: clone and run locally in ~10 minutes (instructions below).*
 

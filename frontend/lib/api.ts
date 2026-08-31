@@ -1,4 +1,4 @@
-// Thin client for the Observatory FastAPI backend.
+// Thin client for the Skydigest FastAPI backend.
 // Pages call these functions instead of fetching URLs themselves,
 // mirroring the repository layer on the backend.
 

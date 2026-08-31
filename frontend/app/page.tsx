@@ -13,7 +13,7 @@ export default async function HomePage() {
   if (!latest) {
     return (
       <main className="archive">
-        <h1>Observatory</h1>
+        <h1>Skydigest</h1>
         <p className="empty">No issues yet — the first one arrives on Saturday.</p>
       </main>
     );

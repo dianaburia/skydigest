@@ -6,7 +6,7 @@ export default function Masthead() {
   return (
     <header className="masthead">
       <Link className="masthead-title" href="/">
-        Observatory
+        Skydigest
       </Link>
       <nav className="masthead-nav">
         <Link href="/">Latest issue</Link>

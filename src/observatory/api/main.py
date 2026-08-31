@@ -88,7 +88,7 @@ def get_rate_limiter() -> DailyIpRateLimiter:
     return _rate_limiter
 
 
-app = FastAPI(title="Observatory", lifespan=lifespan)
+app = FastAPI(title="Skydigest", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -209,9 +209,9 @@ def issue_by_date(issue_date: date) -> IssueOut:
 
 
 NO_ISSUE_PAGE = """<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Observatory</title></head>
+<html><head><meta charset="utf-8"><title>Skydigest</title></head>
 <body style="font-family: Georgia, serif; text-align: center; padding-top: 4rem;">
-<h1>Observatory</h1>
+<h1>Skydigest</h1>
 <p>The first weekly issue hasn't been generated yet — check back on Saturday.</p>
 <p><a href="/chat">Meanwhile, ask the archive anything →</a></p>
 </body></html>"""
