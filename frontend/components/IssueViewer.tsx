@@ -33,6 +33,10 @@ export default function IssueViewer({ html, title }: { html: string; title: stri
     if (!doc || !win || !doc.body) return;
     attachedRef.current = true;
 
+    // On touch screens the native selection menu (Copy/Look Up) pops up
+    // above the selection, so our button goes below it there.
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+
     const update = () => {
       const selection = doc.getSelection();
       const text = selection?.toString().trim() ?? "";
@@ -43,16 +47,23 @@ export default function IssueViewer({ html, title }: { html: string; title: stri
       // The iframe fills its wrapper, so iframe-viewport coordinates are
       // wrapper coordinates: the button can be positioned directly.
       const rect = selection.getRangeAt(0).getBoundingClientRect();
+      const width = iframeRef.current?.clientWidth ?? 0;
+      const above = rect.top - 44;
       setAsk({
-        top: Math.max(rect.top - 44, 6),
-        left: rect.left + rect.width / 2,
+        top: coarsePointer || above < 6 ? rect.bottom + 12 : above,
+        left: Math.min(Math.max(rect.left + rect.width / 2, 80), width - 80),
         text,
       });
     };
 
-    // A tick after mouseup/keyup the selection object is final.
-    doc.addEventListener("mouseup", () => setTimeout(update, 0));
-    doc.addEventListener("keyup", () => setTimeout(update, 0));
+    // selectionchange covers mouse, keyboard AND touch selection (long-press
+    // and handle-dragging fire no mouse events); debounced so the button
+    // doesn't flicker while the selection is still being adjusted.
+    let debounce: number | undefined;
+    doc.addEventListener("selectionchange", () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(update, 250);
+    });
     // Scrolling the issue would leave the button floating over nothing.
     win.addEventListener("scroll", () => setAsk(null));
   }
@@ -82,7 +93,12 @@ export default function IssueViewer({ html, title }: { html: string; title: stri
           type="button"
           className="ask-button"
           style={{ top: ask.top, left: ask.left }}
-          onClick={openChat}
+          // pointerdown, not click: on mobile a tap first collapses the
+          // selection, which would unmount the button before click fires.
+          onPointerDown={(e) => {
+            e.preventDefault();
+            openChat();
+          }}
         >
           Ask about this →
         </button>
