@@ -15,11 +15,12 @@ def test_health_returns_ok():
 
 def test_index_serves_journal_or_fallback():
     # / is the journal front page: either the latest issue or the
-    # "no issue yet" placeholder — both are HTML mentioning Observatory
+    # "no issue yet" placeholder — both are branded HTML. Issues generated
+    # before the 2026-08-31 rebrand say "Observatory", newer ones "Skydigest".
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Observatory" in response.text
+    assert "Skydigest" in response.text or "Observatory" in response.text
 
 
 def test_chat_page_served_at_chat():
