@@ -312,6 +312,7 @@ a:hover {
 
 .ask-button {
   position: absolute;
+  z-index: 20; /* above the floating nav pill */
   transform: translateX(-50%);
   padding: 0.4rem 0.9rem;
   border: 0;

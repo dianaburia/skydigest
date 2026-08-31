@@ -21,17 +21,19 @@ interface AskButton {
 export default function IssueViewer({ html, title }: { html: string; title: string }) {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const attachedRef = useRef(false);
+  const attachedDocRef = useRef<Document | null>(null);
   const [ask, setAsk] = useState<AskButton | null>(null);
 
-  // A srcDoc iframe can finish loading before React hydrates, in which case
-  // the onLoad prop never fires — so attach is also tried from an effect.
+  // A srcDoc iframe can finish loading before React hydrates (then onLoad
+  // never fires — the effect covers it), but it also starts life with a
+  // throwaway about:blank document that is later REPLACED by the real one
+  // (listeners attached to it die with it — onLoad re-attaches). So: attach
+  // from both places, keyed by the actual document instance.
   function attachListeners() {
-    if (attachedRef.current) return;
     const doc = iframeRef.current?.contentDocument;
     const win = iframeRef.current?.contentWindow;
-    if (!doc || !win || !doc.body) return;
-    attachedRef.current = true;
+    if (!doc || !win || !doc.body || attachedDocRef.current === doc) return;
+    attachedDocRef.current = doc;
 
     // On touch screens the native selection menu (Copy/Look Up) pops up
     // above the selection, so our button goes below it there.
@@ -48,9 +50,11 @@ export default function IssueViewer({ html, title }: { html: string; title: stri
       // wrapper coordinates: the button can be positioned directly.
       const rect = selection.getRangeAt(0).getBoundingClientRect();
       const width = iframeRef.current?.clientWidth ?? 0;
+      const height = iframeRef.current?.clientHeight ?? 0;
       const above = rect.top - 44;
+      const below = Math.min(rect.bottom + 12, height - 52);
       setAsk({
-        top: coarsePointer || above < 6 ? rect.bottom + 12 : above,
+        top: coarsePointer || above < 6 ? below : above,
         left: Math.min(Math.max(rect.left + rect.width / 2, 80), width - 80),
         text,
       });
