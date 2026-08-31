@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import Masthead from "@/components/Masthead";
 import { askQuestionStream, Source } from "@/lib/api";
 
 interface ChatMessage {
@@ -86,14 +86,7 @@ function Chat() {
 
   return (
     <div className="chat-page">
-      <header className="issue-header">
-        <span className="brand">Observatory</span>
-        <span className="issue-header-title">Ask the archive</span>
-        <nav className="header-nav">
-          <Link href="/">Latest issue</Link>
-          <Link href="/issues">Past issues</Link>
-        </nav>
-      </header>
+      <Masthead />
       <div className="chat-messages">
         {messages.length === 0 && (
           <p className="chat-hint">

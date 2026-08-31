@@ -1,4 +1,4 @@
-import Link from "next/link";
+import FloatingNav from "@/components/FloatingNav";
 import IssueViewer from "@/components/IssueViewer";
 import { getIssue, getIssues } from "@/lib/api";
 
@@ -19,17 +19,12 @@ export default async function HomePage() {
     );
   }
 
+  // The issue's own masthead is the page header; site chrome is just
+  // the floating pill.
   return (
     <div className="issue-page">
-      <header className="issue-header">
-        <span className="brand">Observatory</span>
-        <span className="issue-header-title">{latest.title}</span>
-        <nav className="header-nav">
-          <Link href="/issues">Past issues</Link>
-          <Link href="/chat">Ask the archive</Link>
-        </nav>
-      </header>
       <IssueViewer html={latest.html} title={latest.title} />
+      <FloatingNav />
     </div>
   );
 }

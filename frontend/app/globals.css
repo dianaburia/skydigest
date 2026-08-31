@@ -52,19 +52,13 @@ a:hover {
 .archive {
   max-width: 42rem;
   margin: 0 auto;
-  padding: 4rem 1.5rem;
+  padding: 2.25rem 1.5rem 4rem;
 }
 
 .archive h1 {
   font-size: 2.5rem;
   font-weight: normal;
   letter-spacing: 0.02em;
-}
-
-.tagline {
-  color: var(--muted);
-  margin-top: 0.5rem;
-  margin-bottom: 2.5rem;
 }
 
 .empty {
@@ -115,37 +109,64 @@ a:hover {
   height: 100vh;
 }
 
-.issue-header {
+/* Newspaper-style nameplate (archive and chat pages) */
+
+.masthead {
   display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.7rem 1.25rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 1.4rem 1rem 1rem;
   border-bottom: 1px solid var(--border);
 }
 
-.issue-header a {
-  white-space: nowrap;
+.masthead-title {
+  font-size: 1.9rem;
+  letter-spacing: 0.04em;
+  color: var(--foreground);
 }
 
-.issue-header-title {
-  color: var(--muted);
-  font-size: 0.9rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.masthead-title:hover {
+  text-decoration: none;
 }
 
-.brand {
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.header-nav {
-  margin-left: auto;
+.masthead-nav {
   display: flex;
-  gap: 1.25rem;
-  white-space: nowrap;
+  gap: 0.7rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.masthead-nav a {
+  color: var(--muted);
+}
+
+.masthead-nav a:hover {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* Floating pill navigation over full-screen issue pages */
+
+.float-nav {
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 1.05rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 /* Chat */
