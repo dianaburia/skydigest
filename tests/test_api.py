@@ -29,6 +29,14 @@ def test_chat_page_served_at_chat():
     assert "Ask the Archive" in response.text
 
 
+def test_suggested_questions_returns_list():
+    # Contract for the chat placeholder rotation: always a JSON list,
+    # possibly empty (no issues yet, or pre-feature issues without questions).
+    response = client.get("/suggested-questions")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
 def test_ask_rejects_empty_question():
     # pydantic validation (min_length=1) must reject before any RAG work happens
     response = client.post("/ask", json={"question": ""})

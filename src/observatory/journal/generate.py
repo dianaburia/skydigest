@@ -149,7 +149,8 @@ no markdown fences, matching exactly this structure:
     {{"heading": "...", "text": "2-4 sentences explaining the paper simply", "source_ids": [3]}}
   ],
   "space_weather_summary": "one paragraph based on the space weather data above",
-  "photo_of_week": {{"source_id": 4, "caption": "1-2 sentences about the APOD image"}}
+  "photo_of_week": {{"source_id": 4, "caption": "1-2 sentences about the APOD image"}},
+  "suggested_questions": ["short reader question", "..."]
 }}
 
 Rules:
@@ -158,6 +159,9 @@ Rules:
 - arxiv_picks: pick 2-3 papers (kind=paper) that a general reader would find
   exciting, and explain each in plain words.
 - photo_of_week: source_id must point to an APOD source (source=apod).
+- suggested_questions: 8-10 short questions (under 90 characters each) that a
+  curious reader might ask after reading this issue, answerable from the
+  sources above. Vary the topics across the whole issue.
 - Every source_id must exist in the numbered list above.
 - Plain English, no jargon, friendly tone."""
 
@@ -255,7 +259,13 @@ def save_html(result: dict) -> str:
     Returns the file path."""
     html = render_html(result)
     insert_issue(
-        Issue(issue_date=date.today(), title=result["issue"]["title"], html=html)
+        Issue(
+            issue_date=date.today(),
+            title=result["issue"]["title"],
+            html=html,
+            # .get: tolerate a model response (or old cache) without questions
+            suggested_questions=result["issue"].get("suggested_questions", []),
+        )
     )
     Path("output").mkdir(exist_ok=True)
     path = Path("output") / f"issue-{date.today().isoformat()}.html"

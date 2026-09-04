@@ -112,3 +112,18 @@ def test_get_issue_returns_full_issue():
 
 def test_get_issue_missing_date_returns_none():
     assert get_issue(date(1999, 12, 31)) is None
+
+
+def test_issue_suggested_questions_roundtrip():
+    """JSONB questions survive insert -> select as the same Python list."""
+    questions = ["Why was Kp so high?", "What did the new exoplanet paper find?"]
+    issue = Issue(
+        issue_date=TEST_ISSUE_DATES[0],
+        title="Test issue",
+        html="<p>body</p>",
+        suggested_questions=questions,
+    )
+    insert_issue(issue)
+    stored = get_issue(issue.issue_date)
+    assert stored is not None
+    assert stored.suggested_questions == questions

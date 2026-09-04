@@ -19,7 +19,12 @@ from pydantic import BaseModel, Field
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
-from observatory.repository import get_issue, get_latest_issue, list_issues
+from observatory.repository import (
+    get_issue,
+    get_latest_issue,
+    get_latest_suggested_questions,
+    list_issues,
+)
 from observatory.rag.answer import (
     StreamDelta,
     StreamSources,
@@ -206,6 +211,13 @@ def issue_by_date(issue_date: date) -> IssueOut:
     if issue is None:
         raise HTTPException(status_code=404, detail=f"No issue for {issue_date}.")
     return IssueOut(issue_date=issue.issue_date, title=issue.title, html=issue.html)
+
+
+@app.get("/suggested-questions")
+def suggested_questions() -> list[str]:
+    """Reader questions for the latest issue; the chat rotates them as
+    placeholder suggestions. Empty list when no issue has questions yet."""
+    return get_latest_suggested_questions()
 
 
 NO_ISSUE_PAGE = """<!DOCTYPE html>

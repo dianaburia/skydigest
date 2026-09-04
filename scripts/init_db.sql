@@ -64,6 +64,10 @@ CREATE TABLE IF NOT EXISTS issues (
     issue_date DATE PRIMARY KEY,
     title      TEXT NOT NULL,
     html       TEXT NOT NULL,
+    -- Short reader questions about this issue (JSON array of strings),
+    -- generated together with the issue; the chat rotates them as
+    -- placeholder suggestions. Empty array for pre-feature issues.
+    suggested_questions JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

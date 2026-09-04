@@ -9,8 +9,10 @@ would not change.
 Functions own their own connections; callers do not pass cursors.
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
+
+from psycopg.types.json import Jsonb
 
 from observatory.infra.db import get_conn
 
@@ -285,6 +287,9 @@ class Issue:
     issue_date: date
     title: str
     html: str
+    # Short reader questions about this issue; the chat rotates them as
+    # placeholder suggestions. Empty for issues generated before the feature.
+    suggested_questions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -295,16 +300,21 @@ class IssueSummary:
 
 def insert_issue(issue: Issue) -> None:
     """Store a rendered issue; rerunning generation the same day overwrites it."""
+    params = asdict(issue)
+    # psycopg needs an explicit wrapper to send a Python list as JSONB.
+    params["suggested_questions"] = Jsonb(issue.suggested_questions)
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO issues (issue_date, title, html)
-                VALUES (%(issue_date)s, %(title)s, %(html)s)
+                INSERT INTO issues (issue_date, title, html, suggested_questions)
+                VALUES (%(issue_date)s, %(title)s, %(html)s, %(suggested_questions)s)
                 ON CONFLICT (issue_date) DO UPDATE
-                    SET title = EXCLUDED.title, html = EXCLUDED.html
+                    SET title = EXCLUDED.title,
+                        html = EXCLUDED.html,
+                        suggested_questions = EXCLUDED.suggested_questions
                 """,
-                asdict(issue),
+                params,
             )
 
 
@@ -313,10 +323,49 @@ def get_latest_issue() -> Issue | None:
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT issue_date, title, html FROM issues ORDER BY issue_date DESC LIMIT 1"
+                """
+                SELECT issue_date, title, html, suggested_questions
+                FROM issues ORDER BY issue_date DESC LIMIT 1
+                """
             )
             row = cur.fetchone()
             return Issue(*row) if row else None
+
+
+def get_latest_suggested_questions() -> list[str]:
+    """Suggested reader questions of the most recent issue (may be empty)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT suggested_questions FROM issues ORDER BY issue_date DESC LIMIT 1"
+            )
+            row = cur.fetchone()
+            return row[0] if row else []
+
+
+def list_issues_without_questions() -> list[Issue]:
+    """Issues that have no suggested questions yet (backfill targets)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT issue_date, title, html, suggested_questions
+                FROM issues
+                WHERE jsonb_array_length(suggested_questions) = 0
+                ORDER BY issue_date
+                """
+            )
+            return [Issue(*row) for row in cur.fetchall()]
+
+
+def set_issue_suggested_questions(issue_date: date, questions: list[str]) -> None:
+    """Attach suggested questions to an existing issue (backfill)."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE issues SET suggested_questions = %s WHERE issue_date = %s",
+                (Jsonb(questions), issue_date),
+            )
 
 
 def list_issues() -> list[IssueSummary]:
@@ -334,7 +383,10 @@ def get_issue(issue_date: date) -> Issue | None:
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT issue_date, title, html FROM issues WHERE issue_date = %s",
+                """
+                SELECT issue_date, title, html, suggested_questions
+                FROM issues WHERE issue_date = %s
+                """,
                 (issue_date,),
             )
             row = cur.fetchone()

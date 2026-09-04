@@ -32,6 +32,19 @@ export async function getIssue(date: string): Promise<Issue | null> {
   return res.json();
 }
 
+// Reader questions for the latest issue, rotated as chat placeholder
+// suggestions. Suggestions are decoration, not content — on any failure
+// the chat just keeps its static placeholder, so errors resolve to [].
+export async function getSuggestedQuestions(): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_URL}/suggested-questions`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
 export interface Source {
   number: number;
   title: string;
