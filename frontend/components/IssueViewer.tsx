@@ -18,6 +18,17 @@ interface AskButton {
 // "Ask about this" button that opens the chat with the selection as context.
 // The iframe is created via srcDoc, so it is same-origin and its document
 // is fully accessible from here.
+// Source links must open in a new tab: navigating the iframe itself to an
+// external site hits X-Frame-Options/frame-ancestors on most news sites
+// (NASA included) and shows "refused to connect" instead of the page.
+const BASE_TAG = '<base target="_blank">';
+
+function withBlankTargets(html: string): string {
+  return /<head[^>]*>/i.test(html)
+    ? html.replace(/<head([^>]*)>/i, `<head$1>${BASE_TAG}`)
+    : BASE_TAG + html;
+}
+
 export default function IssueViewer({ html, title }: { html: string; title: string }) {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -88,7 +99,7 @@ export default function IssueViewer({ html, title }: { html: string; title: stri
       <iframe
         ref={iframeRef}
         className="issue-frame"
-        srcDoc={html}
+        srcDoc={withBlankTargets(html)}
         title={title}
         onLoad={attachListeners}
       />
