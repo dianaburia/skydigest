@@ -427,3 +427,34 @@ def search_chunks(embedding: list[float], limit: int = 8) -> list[RetrievedChunk
                 {"q": str(embedding), "limit": limit},
             )
             return [RetrievedChunk(*row) for row in cur.fetchall()]
+
+
+@dataclass
+class AskedQuestion:
+    """One real question sent to /ask, with what retrieval returned for it.
+
+    Raw material for growing tests/eval_questions.json: questions are
+    reviewed and labeled by a human later, never auto-promoted.
+    """
+
+    question: str
+    retrieved: list[RetrievedChunk] = field(default_factory=list)
+
+
+def insert_asked_question(asked: AskedQuestion) -> None:
+    """Append one question to the asked_questions log."""
+    payload = [
+        {
+            "doc_type": c.doc_type,
+            "doc_id": c.doc_id,
+            "url": c.url,
+            "title": c.title,
+            "score": c.score,
+        }
+        for c in asked.retrieved
+    ]
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO asked_questions (question, retrieved) VALUES (%s, %s)",
+            (asked.question, Jsonb(payload)),
+        )

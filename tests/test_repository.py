@@ -11,10 +11,13 @@ import pytest
 from observatory.infra.db import get_conn
 from observatory.repository import (
     Article,
+    AskedQuestion,
     Issue,
+    RetrievedChunk,
     get_issue,
     insert_article,
     insert_articles,
+    insert_asked_question,
     insert_issue,
     list_issues,
 )
@@ -31,6 +34,9 @@ def cleanup_test_rows():
         cur.execute("DELETE FROM articles WHERE source = %s", (TEST_SOURCE,))
         cur.execute(
             "DELETE FROM issues WHERE issue_date = ANY(%s)", (list(TEST_ISSUE_DATES),)
+        )
+        cur.execute(
+            "DELETE FROM asked_questions WHERE question LIKE %s", (f"{TEST_SOURCE}%",)
         )
 
 
@@ -112,6 +118,41 @@ def test_get_issue_returns_full_issue():
 
 def test_get_issue_missing_date_returns_none():
     assert get_issue(date(1999, 12, 31)) is None
+
+
+def test_insert_asked_question_stores_retrieved_snapshot():
+    """The question log keeps the question and a JSONB snapshot of retrieval."""
+    asked = AskedQuestion(
+        question=f"{TEST_SOURCE} what is a magnetar?",
+        retrieved=[
+            RetrievedChunk(
+                doc_type="paper",
+                doc_id="2608.01621",
+                content="...",
+                score=0.31,
+                title="CME interactions",
+                url="https://arxiv.org/abs/2608.01621",
+            )
+        ],
+    )
+    insert_asked_question(asked)
+
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT retrieved FROM asked_questions WHERE question = %s",
+            (asked.question,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    assert row[0] == [
+        {
+            "doc_type": "paper",
+            "doc_id": "2608.01621",
+            "url": "https://arxiv.org/abs/2608.01621",
+            "title": "CME interactions",
+            "score": 0.31,
+        }
+    ]
 
 
 def test_issue_suggested_questions_roundtrip():

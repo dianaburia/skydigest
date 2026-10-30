@@ -92,3 +92,16 @@ CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw
     ON chunks USING hnsw (embedding vector_cosine_ops);
 
 CREATE INDEX IF NOT EXISTS idx_chunks_doc ON chunks (doc_type, doc_id);
+
+-- ============================================================================
+-- asked_questions: append-only log of real questions sent to /ask.
+-- Raw material for growing tests/eval_questions.json (and, later, for
+-- fine-tuning data in phase 4). 'retrieved' snapshots what retrieval
+-- returned at ask time: [{doc_type, doc_id, url, title, score}, ...].
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS asked_questions (
+    id        BIGSERIAL PRIMARY KEY,
+    ts        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    question  TEXT NOT NULL,
+    retrieved JSONB NOT NULL DEFAULT '[]'::jsonb
+);

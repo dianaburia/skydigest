@@ -17,7 +17,7 @@ import anthropic
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
 from observatory.rag.retrieve import retrieve
-from observatory.repository import RetrievedChunk
+from observatory.repository import AskedQuestion, RetrievedChunk, insert_asked_question
 
 logger = logging.getLogger(__name__)
 
@@ -83,12 +83,25 @@ Answer the question using ONLY the sources above. Cite source numbers inline
 like [1]. If the sources do not answer the question, say so honestly."""
 
 
+def _log_question(question: str, chunks: list[RetrievedChunk]) -> None:
+    """Best-effort append to the asked_questions log.
+
+    The log is eval-set raw material, never worth failing an answer over:
+    any error is reported and swallowed.
+    """
+    try:
+        insert_asked_question(AskedQuestion(question=question, retrieved=chunks))
+    except Exception:
+        logger.warning("Failed to log the asked question", exc_info=True)
+
+
 def answer(question: str) -> dict | None:
     """Answer a question from the indexed corpus.
 
     Returns {"answer": str, "sources": list[GroupedSource]} or None on failure.
     """
     chunks = retrieve(question, top_k=TOP_K)
+    _log_question(question, chunks)
     if not chunks:
         logger.error("Retrieval returned no chunks — is the index empty?")
         return None
@@ -146,6 +159,7 @@ def answer_stream(question: str) -> Iterator[StreamEvent]:
     StreamSources with the cited sources; StreamError is terminal.
     """
     chunks = retrieve(question, top_k=TOP_K)
+    _log_question(question, chunks)
     if not chunks:
         logger.error("Retrieval returned no chunks — is the index empty?")
         yield StreamError(detail="The archive returned nothing; try again later.")
