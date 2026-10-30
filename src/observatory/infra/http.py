@@ -5,6 +5,7 @@ collector focuses on domain logic instead of repeating boilerplate.
 """
 
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -12,6 +13,8 @@ import httpx
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10.0
+DEFAULT_ATTEMPTS = 4
+RETRY_DELAY_SECONDS = 30.0
 
 
 def get_json(
@@ -19,25 +22,44 @@ def get_json(
     *,
     params: dict[str, Any] | None = None,
     timeout: float = DEFAULT_TIMEOUT,
+    attempts: int = DEFAULT_ATTEMPTS,
+    retry_delay: float = RETRY_DELAY_SECONDS,
 ) -> Any:
     """GET a URL and return the parsed JSON body.
 
-    Returns the parsed JSON on success, or None on network or HTTP error.
+    Retries transient failures (5xx, network errors) up to ``attempts``
+    times with ``retry_delay`` seconds in between; client errors (4xx)
+    fail immediately since a retry cannot change the outcome. Returns
+    the parsed JSON on success, or None once all attempts are exhausted.
     All errors are logged with the request URL for debugging.
     """
-    try:
-        response = httpx.get(url, params=params, timeout=timeout)
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-        logger.error(
-            "HTTP %s from %s: %s",
-            e.response.status_code,
-            url,
-            e.response.text[:200],
-        )
-        return None
-    except httpx.HTTPError as e:
-        logger.error("Request to %s failed: %s", url, e)
-        return None
+    for attempt in range(1, attempts + 1):
+        try:
+            response = httpx.get(url, params=params, timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code < 500:
+                logger.error(
+                    "HTTP %s from %s: %s",
+                    e.response.status_code,
+                    url,
+                    e.response.text[:200],
+                )
+                return None
+            logger.warning(
+                "HTTP %s from %s (attempt %d/%d)",
+                e.response.status_code,
+                url,
+                attempt,
+                attempts,
+            )
+        except httpx.HTTPError as e:
+            logger.warning(
+                "Request to %s failed (attempt %d/%d): %s", url, attempt, attempts, e
+            )
+        if attempt < attempts:
+            time.sleep(retry_delay)
 
-    return response.json()
+    logger.error("Giving up on %s after %d attempts", url, attempts)
+    return None
