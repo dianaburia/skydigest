@@ -11,6 +11,7 @@ import logging
 import re
 import sys
 from dataclasses import asdict, dataclass
+from dataclasses import field as dataclasses_field
 from datetime import date
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from observatory.config import get_settings
 from observatory.infra.logging_setup import setup_logging
+from observatory.rag.clustering import cluster_articles
 from observatory.text import clean_text
 from observatory.repository import (
     Article,
@@ -51,6 +53,15 @@ CACHE_PATH = Path("output/issue-latest.json")
 
 
 @dataclass
+class AltSource:
+    """Another outlet's copy of the same story (one cluster member)."""
+
+    source: str
+    title: str
+    url: str
+
+
+@dataclass
 class NumberedSource:
     number: int
     kind: str  # 'article' | 'paper'
@@ -59,6 +70,7 @@ class NumberedSource:
     url: str
     snippet: str
     image_url: str | None = None
+    also_covered_by: list[AltSource] = dataclasses_field(default_factory=list)
 
 
 def _clean_text(raw: str | None, limit: int = SNIPPET_LEN) -> str:
@@ -66,21 +78,37 @@ def _clean_text(raw: str | None, limit: int = SNIPPET_LEN) -> str:
     return clean_text(raw, limit=limit)
 
 
+def _cluster_primary(cluster: list[Article]) -> Article:
+    """The member with the most text represents the event (ties: first = newest)."""
+    return max(cluster, key=lambda a: len(a.summary or a.content or ""))
+
+
 def build_sources(
-    articles: list[Article], papers: list[Paper]
+    article_clusters: list[list[Article]], papers: list[Paper]
 ) -> list[NumberedSource]:
-    """Number all sources sequentially: articles first, then papers."""
+    """Number all sources sequentially: article events first, then papers.
+
+    Each cluster of same-story articles becomes ONE numbered source: the
+    primary article carries the text, the rest ride along as
+    `also_covered_by` and are rendered as extra links in the issue footer.
+    """
     sources: list[NumberedSource] = []
-    for article in articles:
+    for cluster in article_clusters:
+        primary = _cluster_primary(cluster)
         sources.append(
             NumberedSource(
                 number=len(sources) + 1,
                 kind="article",
-                source=article.source,
-                title=article.title,
-                url=article.url,
-                snippet=_clean_text(article.summary or article.content),
-                image_url=article.image_url,
+                source=primary.source,
+                title=primary.title,
+                url=primary.url,
+                snippet=_clean_text(primary.summary or primary.content),
+                image_url=primary.image_url,
+                also_covered_by=[
+                    AltSource(source=a.source, title=a.title, url=a.url)
+                    for a in cluster
+                    if a is not primary
+                ],
             )
         )
     for paper in papers:
@@ -100,7 +128,12 @@ def build_sources(
 def _format_sources_block(sources: list[NumberedSource]) -> str:
     lines = []
     for s in sources:
-        lines.append(f"[{s.number}] ({s.kind}/{s.source}) {s.title}\n    {s.snippet}")
+        covered = (
+            f" [also covered by: {', '.join(a.source for a in s.also_covered_by)}]"
+            if s.also_covered_by
+            else ""
+        )
+        lines.append(f"[{s.number}] ({s.kind}/{s.source}) {s.title}{covered}\n    {s.snippet}")
     return "\n".join(lines)
 
 
@@ -154,8 +187,10 @@ no markdown fences, matching exactly this structure:
 }}
 
 Rules:
-- main_events: pick the 3-4 most important stories of the week. Prefer stories
-  covered by several sources; merge duplicates into one event citing all of them.
+- main_events: pick the 3-4 most important stories of the week. Duplicate
+  reports are already merged: a source marked [also covered by: ...] is one
+  event reported by several outlets — such wide coverage is a strong sign
+  the story matters.
 - arxiv_picks: pick 2-3 papers (kind=paper) that a general reader would find
   exciting, and explain each in plain words.
 - photo_of_week: source_id must point to an APOD source (source=apod).
@@ -192,9 +227,15 @@ def generate_issue(days: int = 7) -> dict | None:
         logger.error("Nothing to write about: no articles or papers in the last %d days", days)
         return None
 
-    sources = build_sources(articles, papers)
+    clusters = cluster_articles(articles)
+    merged = len(articles) - len(clusters)
+    sources = build_sources(clusters, papers)
     logger.info(
-        "Generating issue from %d articles + %d papers", len(articles), len(papers)
+        "Generating issue from %d articles (%d events, %d duplicates merged) + %d papers",
+        len(articles),
+        len(clusters),
+        merged,
+        len(papers),
     )
 
     client = anthropic.Anthropic(api_key=get_settings().anthropic_api_key)
@@ -288,10 +329,11 @@ def _load_cache() -> dict | None:
     if not CACHE_PATH.exists():
         return None
     payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-    return {
-        "issue": payload["issue"],
-        "sources": [NumberedSource(**d) for d in payload["sources"]],
-    }
+    sources = []
+    for d in payload["sources"]:
+        alts = [AltSource(**a) for a in d.pop("also_covered_by", [])]
+        sources.append(NumberedSource(**d, also_covered_by=alts))
+    return {"issue": payload["issue"], "sources": sources}
 
 
 def main() -> int:

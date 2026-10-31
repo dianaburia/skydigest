@@ -30,8 +30,9 @@ def _paper(arxiv_id: str) -> Paper:
 
 
 def test_build_sources_numbers_articles_then_papers():
+    # build_sources takes article CLUSTERS since step 2.3; two singletons here.
     sources = build_sources(
-        [_article("https://a/1"), _article("https://a/2")], [_paper("2608.00001")]
+        [[_article("https://a/1")], [_article("https://a/2")]], [_paper("2608.00001")]
     )
     assert [s.number for s in sources] == [1, 2, 3]
     assert [s.kind for s in sources] == ["article", "article", "paper"]

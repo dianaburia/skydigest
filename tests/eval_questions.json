@@ -199,5 +199,67 @@
       "mode": "partial",
       "_note": "REAL question (owner, 2026-10-31). The mission-name doc exists in the corpus but never explains the name — the cleanest 'source found, answer absent' case we have."
     }
+  ],
+  "duplicate_pairs": [
+    {
+      "name": "venus-zone (canonical case from EVAL.md 2026-08-12)",
+      "label": "duplicate",
+      "url_a": "https://www.universetoday.com/articles/finding-venus-zone-planets-with-plato-will-show-us-how-habitable-planets-evolve",
+      "url_b": "https://phys.org/news/2026-07-venus-zone-planets-plato-habitable.html"
+    },
+    {
+      "name": "nasa starshade reprint",
+      "label": "duplicate",
+      "url_a": "https://phys.org/news/2026-08-nasa-starshade-enable-astronomers-image.html",
+      "url_b": "https://www.universetoday.com/articles/nasa-starshade-would-enable-astronomers-to-directly-image-rocky-exoworlds"
+    },
+    {
+      "name": "chang'e-7 delay (phys vs universetoday)",
+      "label": "duplicate",
+      "url_a": "https://phys.org/news/2026-08-china-unmanned-moon-mission-delayed.html",
+      "url_b": "https://www.universetoday.com/articles/china-postpones-the-change-7-mission"
+    },
+    {
+      "name": "chang'e-7 delay (two phys.org takes)",
+      "label": "duplicate",
+      "url_a": "https://phys.org/news/2026-08-china-abruptly-postpones-ambitious-lunar.html",
+      "url_b": "https://phys.org/news/2026-08-china-unmanned-moon-mission-delayed.html"
+    },
+    {
+      "name": "young sun shaped climate (phys repost of NASA release)",
+      "label": "duplicate",
+      "url_a": "https://phys.org/news/2026-08-sun-galactic-journey-superflare-youth.html",
+      "url_b": "https://science.nasa.gov/solar-system/starstruck-nasa-research-shows-how-suns-ancient-history-shaped-earth/"
+    },
+    {
+      "name": "black holes grow with universe (prod-only pair)",
+      "label": "duplicate",
+      "url_a": "https://phys.org/news/2026-09-black-holes-universe.html",
+      "url_b": "https://www.universetoday.com/articles/do-black-holes-grow-along-with-the-universe-a-new-study-says-yes"
+    },
+    {
+      "name": "swift saga: rescue launched vs rescue called off (HARD negative)",
+      "label": "distinct",
+      "url_a": "https://skyandtelescope.org/astronomy-news/mission-launches-to-rescue-swift-observatory/",
+      "url_b": "https://phys.org/news/2026-08-mission-nasa-aging-swift-space.html"
+    },
+    {
+      "name": "exoplanet topic, different stories (venus zone vs exomoon)",
+      "label": "distinct",
+      "url_a": "https://www.universetoday.com/articles/finding-venus-zone-planets-with-plato-will-show-us-how-habitable-planets-evolve",
+      "url_b": "https://skyandtelescope.org/astronomy-news/new-contender-for-exomoon-title-elicits-skepticism/"
+    },
+    {
+      "name": "sun topic, different stories (young sun climate vs meteorite dust)",
+      "label": "distinct",
+      "url_a": "https://phys.org/news/2026-08-sun-galactic-journey-superflare-youth.html",
+      "url_b": "https://phys.org/news/2026-08-meteorite-magnetism-sun.html"
+    },
+    {
+      "name": "moon topic, different stories (chang'e-7 delay vs chang'e-6 samples)",
+      "label": "distinct",
+      "url_a": "https://www.universetoday.com/articles/china-postpones-the-change-7-mission",
+      "url_b": "https://www.universetoday.com/articles/change-6-samples-reveal-how-earth-slows-solar-wind-striking-moons-near-side"
+    }
   ]
 }

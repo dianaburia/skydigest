@@ -9,6 +9,7 @@ would not change.
 Functions own their own connections; callers do not pass cursors.
 """
 
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 
@@ -463,6 +464,36 @@ def get_space_weather_stats(days: int = 7) -> list[SpaceWeatherStat]:
             (days,),
         )
         return [SpaceWeatherStat(*row) for row in cur.fetchall()]
+
+
+def get_article_embeddings(article_ids: list[int]) -> dict[int, list[float]]:
+    """Stored embedding of each article's first chunk, keyed by article id.
+
+    The indexer computes these hourly; reading them back lets the slim
+    journal image cluster articles WITHOUT the 2 GB embedding model.
+    Articles not indexed yet are simply absent from the result.
+    """
+    if not article_ids:
+        return {}
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT doc_id::int, embedding::text
+            FROM chunks
+            WHERE doc_type = 'article' AND chunk_index = 0 AND doc_id = ANY(%s)
+            """,
+            ([str(i) for i in article_ids],),
+        )
+        return {row[0]: json.loads(row[1]) for row in cur.fetchall()}
+
+
+def get_article_ids_by_url(urls: list[str]) -> dict[str, int]:
+    """Map article urls to their ids (urls missing from the table are absent)."""
+    if not urls:
+        return {}
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT url, id FROM articles WHERE url = ANY(%s)", (urls,))
+        return dict(cur.fetchall())
 
 
 def doc_in_corpus(doc_type: str, ident: str) -> bool:

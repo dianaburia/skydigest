@@ -121,7 +121,10 @@
     <h2>Sources</h2>
     <ol>
       {% for s in cited %}
-      <li value="{{ s.number }}"><a href="{{ s.url }}">{{ s.title }}</a></li>
+      <li value="{{ s.number }}"><a href="{{ s.url }}">{{ s.title }}</a>
+        {%- if s.also_covered_by %} <span class="also">— also covered by
+        {%- for alt in s.also_covered_by %} <a href="{{ alt.url }}">{{ alt.source }}</a>{{ "," if not loop.last }}{% endfor %}</span>
+        {%- endif %}</li>
       {% endfor %}
     </ol>
   </div>
