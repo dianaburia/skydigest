@@ -95,13 +95,16 @@ def _log_question(question: str, chunks: list[RetrievedChunk]) -> None:
         logger.warning("Failed to log the asked question", exc_info=True)
 
 
-def answer(question: str) -> dict | None:
+def answer(question: str, log: bool = True) -> dict | None:
     """Answer a question from the indexed corpus.
 
     Returns {"answer": str, "sources": list[GroupedSource]} or None on failure.
+    log=False skips the asked_questions log — used by the eval runner so
+    synthetic eval runs don't pollute the real-question log.
     """
     chunks = retrieve(question, top_k=TOP_K)
-    _log_question(question, chunks)
+    if log:
+        _log_question(question, chunks)
     if not chunks:
         logger.error("Retrieval returned no chunks — is the index empty?")
         return None

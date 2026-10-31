@@ -9,6 +9,13 @@ Run locally (needs the embedding model and a populated database):
 
     uv run python -m observatory.rag.evaluate
 
+With --abstention it also measures the answer/refuse decision: every
+abstention question must produce a refusal (the system prompt's literal
+"I don't know based on my sources" contract) and every retrieval
+question must NOT — a false refusal is as wrong as a hallucination.
+This mode calls the LLM once per question (~10+ paid calls), so it is
+opt-in; those calls skip the asked_questions log.
+
 Not wired into CI — the model alone is ~2 GB. Run before "release"
 changes (chunking, embedding model, data cleanup) and record the numbers
 in the private EVAL.md.
@@ -21,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from observatory.infra.logging_setup import setup_logging
+from observatory.rag.answer import answer
 from observatory.rag.retrieve import retrieve
 from observatory.repository import RetrievedChunk
 
@@ -99,6 +107,52 @@ def evaluate_retrieval(specs: list[dict]) -> list[QuestionResult]:
     return [evaluate_question(spec, retrieve(spec["question"], TOP_K)) for spec in specs]
 
 
+# The system prompt tells the model to refuse with the literal phrase
+# "I don't know based on my sources"; "don't know" also catches variants
+# like "I don't know the full specific reason based on my sources".
+REFUSAL_MARKER = "don't know"
+
+
+@dataclass
+class AbstentionResult:
+    question_id: str
+    question: str
+    should_abstain: bool
+    abstained: bool
+
+    @property
+    def correct(self) -> bool:
+        return self.abstained == self.should_abstain
+
+
+def evaluate_abstention(
+    abstention_specs: list[dict], retrieval_specs: list[dict]
+) -> list[AbstentionResult]:
+    """Run the FULL answer chain and judge the answer/refuse decision.
+
+    One paid LLM call per question. A failed call (None) is skipped with
+    a warning rather than guessed either way.
+    """
+    results: list[AbstentionResult] = []
+    labeled = [(spec, True) for spec in abstention_specs] + [
+        (spec, False) for spec in retrieval_specs
+    ]
+    for spec, should_abstain in labeled:
+        generated = answer(spec["question"], log=False)
+        if generated is None:
+            print(f"  ! {spec['id']}: answer() failed, skipping", file=sys.stderr)
+            continue
+        results.append(
+            AbstentionResult(
+                question_id=str(spec["id"]),
+                question=spec["question"],
+                should_abstain=should_abstain,
+                abstained=REFUSAL_MARKER in generated["answer"].lower(),
+            )
+        )
+    return results
+
+
 def main() -> int:
     setup_logging()
 
@@ -127,7 +181,24 @@ def main() -> int:
         hits = sum(r.hit_at[cutoff] for r in results)
         print(f"Recall@{cutoff}: {hits}/{n} = {hits / n:.0%}")
     print(f"MRR:      {mrr:.3f}")
-    print(f"\n(abstention questions skipped: {len(eval_set.get('abstention', []))} — generation-side, evaluated manually)")
+
+    abstention_specs = eval_set.get("abstention", [])
+    if "--abstention" not in sys.argv:
+        print(f"\n(abstention skipped: {len(abstention_specs)} questions — rerun with --abstention to judge the answer/refuse decision; one paid LLM call each)")
+        return 0
+
+    print(f"\nJudging answer/refuse decisions ({len(abstention_specs) + len(specs)} LLM calls)...\n")
+    decisions = evaluate_abstention(abstention_specs, specs)
+    print(f"{'id':>3}  {'expected':<8} {'got':<8}  {'ok':>2}  question")
+    for d in decisions:
+        expected = "refuse" if d.should_abstain else "answer"
+        got = "refuse" if d.abstained else "answer"
+        print(
+            f"{d.question_id:>3}  {expected:<8} {got:<8}"
+            f"  {'✓' if d.correct else '✗':>2}  {d.question[:55]}"
+        )
+    correct = sum(d.correct for d in decisions)
+    print(f"\nAbstention accuracy: {correct}/{len(decisions)} = {correct / len(decisions):.0%}")
     return 0
 
 
