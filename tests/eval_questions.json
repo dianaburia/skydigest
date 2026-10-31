@@ -53,6 +53,17 @@
         {"doc_type": "article", "url": "https://phys.org/news/2026-08-einstein-probe-rare-ray-star.html"}
       ],
       "_note": "Definition-style question (first of its kind in the set). Verified live in the cloud chat 2026-08-25: answer wove together 2 papers + 2 articles."
+    },
+    {
+      "id": 7,
+      "question": "Regarding this passage from the journal: \"Crew-13 Blasts Off\"\n\nwhich exactly experiments?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://www.nasa.gov/humans-in-space/nasa-to-study-human-health-performance-during-crew-13-mission/"},
+        {"doc_type": "article", "url": "https://www.nasa.gov/news-release/nasas-spacex-crew-13-launches-to-international-space-station/"},
+        {"doc_type": "article", "url": "https://www.nasa.gov/humans-in-space/what-you-need-to-know-about-nasas-spacex-crew-13-mission/"}
+      ],
+      "_note": "First REAL highlight-to-ask question (owner, 2026-10-31): the string is exactly what the chat sends — selected passage + question. Answered live on prod citing these sources. The health/performance article is the best match (lists the experiments)."
     }
   ],
   "abstention": [
