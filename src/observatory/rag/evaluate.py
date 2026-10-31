@@ -30,7 +30,7 @@ from pathlib import Path
 from observatory.infra.logging_setup import setup_logging
 from observatory.rag.answer import answer
 from observatory.rag.retrieve import retrieve
-from observatory.repository import RetrievedChunk
+from observatory.repository import RetrievedChunk, doc_in_corpus
 
 EVAL_SET_PATH = Path("tests/eval_questions.json")
 TOP_K = 8  # what the production chat retrieves
@@ -107,6 +107,26 @@ def evaluate_retrieval(specs: list[dict]) -> list[QuestionResult]:
     return [evaluate_question(spec, retrieve(spec["question"], TOP_K)) for spec in specs]
 
 
+def split_scorable(specs: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Separate questions whose gold docs exist in THIS database.
+
+    The eval set is labeled against prod, but eval also runs on the local
+    sandbox, which lags behind. A question whose golds are absent cannot
+    be hit by construction ('any' needs at least one gold present, 'all'
+    needs every one) — scoring it as a miss would measure corpus lag, not
+    retrieval quality, so it is reported separately as skipped.
+    """
+    scorable, skipped = [], []
+    for spec in specs:
+        present = [
+            doc_in_corpus(e["doc_type"], e.get("url") or e.get("arxiv_id"))
+            for e in spec["expected"]
+        ]
+        ok = all(present) if spec["require"] == "all" else any(present)
+        (scorable if ok else skipped).append(spec)
+    return scorable, skipped
+
+
 # The system prompt tells the model to refuse with the literal phrase
 # "I don't know based on my sources"; "don't know" also catches variants
 # like "I don't know the full specific reason based on my sources".
@@ -161,7 +181,13 @@ def main() -> int:
         return 1
     eval_set = json.loads(EVAL_SET_PATH.read_text())
 
-    specs = eval_set["retrieval"]
+    specs, skipped = split_scorable(eval_set["retrieval"])
+    if skipped:
+        ids = ", ".join(str(s["id"]) for s in skipped)
+        print(
+            f"\nSkipped {len(skipped)} question(s) whose gold docs are not in this "
+            f"database (corpus lag, not a retrieval miss): {ids}"
+        )
     results = evaluate_retrieval(specs)
 
     print()

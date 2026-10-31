@@ -1,23 +1,26 @@
 {
-  "_comment": "Labeled evaluation set for the RAG pipeline. Canonical source for questions and expectations; human notes and check history live in the private EVAL.md. 'require': 'any' = hit if at least one expected doc is in top-8; 'all' = every listed doc must be found. Articles are identified by url, papers by arxiv_id.",
+  "_comment": "Labeled evaluation set for the RAG pipeline. Canonical source for questions and expectations; human notes and check history live in the private EVAL.md. 'require': 'any' = hit if at least one expected doc is in top-8; 'all' = every listed doc must be found. Articles are identified by url, papers by arxiv_id (version suffix ignored). Questions 8-16 are REAL user questions (owner, 2026-10-31, from the asked_questions log); highlight-to-ask questions keep the exact combined string the chat sends. Time-sensitive questions (marked in _note) need periodic relabeling: their gold answer changes as the corpus grows.",
   "retrieval": [
     {
       "id": 1,
       "question": "what is new about exoplanets?",
       "require": "any",
       "expected": [
-        {"doc_type": "article", "url": "https://skyandtelescope.org/astronomy-news/new-contender-for-exomoon-title-elicits-skepticism/"},
-        {"doc_type": "article", "url": "https://www.universetoday.com/articles/finding-venus-zone-planets-with-plato-will-show-us-how-habitable-planets-evolve"},
-        {"doc_type": "article", "url": "https://phys.org/news/2026-07-venus-zone-planets-plato-habitable.html"}
-      ]
+        {"doc_type": "article", "url": "https://phys.org/news/2026-10-exoplanet-world-private-space-telescope.html"},
+        {"doc_type": "article", "url": "https://science.nasa.gov/missions/hubble/suspected-second-generation-planet-solves-nasa-hubble-cold-case/"},
+        {"doc_type": "paper", "arxiv_id": "2608.18172"}
+      ],
+      "_note": "TIME-SENSITIVE ('new'). Relabeled 2026-10-31: the July 2026 labels went stale on prod (newer exoplanet articles rightly outrank them) — first documented label-rot case. Refresh these periodically."
     },
     {
       "id": 2,
       "question": "aurora forecast and geomagnetic storms",
       "require": "any",
       "expected": [
+        {"doc_type": "article", "url": "https://science.nasa.gov/science-research/heliophysics/nasas-coffies-uses-ai-to-predict-storm-causing-active-regions-on-sun/"},
         {"doc_type": "article", "url": "https://phys.org/news/2026-07-deep-space-cubesat-solar-storm.html"}
-      ]
+      ],
+      "_note": "Relabeled 2026-10-31: the lone July cubesat label failed everywhere (retrieval miss + model refusal agreed it was broken); added NASA COFFIES storm-prediction article as an alternative gold."
     },
     {
       "id": 3,
@@ -61,9 +64,108 @@
       "expected": [
         {"doc_type": "article", "url": "https://www.nasa.gov/humans-in-space/nasa-to-study-human-health-performance-during-crew-13-mission/"},
         {"doc_type": "article", "url": "https://www.nasa.gov/news-release/nasas-spacex-crew-13-launches-to-international-space-station/"},
-        {"doc_type": "article", "url": "https://www.nasa.gov/humans-in-space/what-you-need-to-know-about-nasas-spacex-crew-13-mission/"}
+        {"doc_type": "article", "url": "https://www.nasa.gov/missions/station/commercial-crew/what-you-need-to-know-about-nasas-spacex-crew-13-mission/"}
       ],
-      "_note": "First REAL highlight-to-ask question (owner, 2026-10-31): the string is exactly what the chat sends — selected passage + question. Answered live on prod citing these sources. The health/performance article is the best match (lists the experiments)."
+      "_note": "First REAL highlight-to-ask question (owner, 2026-10-31). 'What You Need to Know' URL corrected 2026-10-31 to the prod spelling (missions/station/commercial-crew), my earlier guess pointed at humans-in-space."
+    },
+    {
+      "id": 8,
+      "question": "Regarding this passage from the journal: \"CHARA Array\"\n\nWhere this telescope is located?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "paper", "arxiv_id": "2609.02406"}
+      ],
+      "_note": "Live 2026-10-31. Of the three CHARA papers in the corpus only the SPICA abstract names Mount Wilson (checked against arXiv 2026-10-31), so it is the single gold."
+    },
+    {
+      "id": 9,
+      "question": "What is the latest information about changes in the size of the universe? Is it expanding?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-07-dark-energy-foundations-today-cosmological.html"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-09-big-supernova-dataset-dark-energy.html"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-09-black-holes-universe.html"},
+        {"doc_type": "article", "url": "https://www.universetoday.com/articles/do-black-holes-grow-along-with-the-universe-a-new-study-says-yes"}
+      ],
+      "_note": "Live 2026-10-31. Mildly TIME-SENSITIVE ('latest'), but the dark-energy-debate golds should stay valid for a long while."
+    },
+    {
+      "id": 10,
+      "question": "How big is the Lazuli Space Telescope's mirror compared to Hubble's?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-10-exoplanet-world-private-space-telescope.html"}
+      ],
+      "_note": "Live 2026-10-31 — the owner asked one of the journal's own suggested questions; the answer (3 m vs 2.4 m) is in this single article."
+    },
+    {
+      "id": 11,
+      "question": "Regarding this passage from the journal: \"with Artemis III now confirmed to launch in 2027\"\n\nAre there any exact timeline on this?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://www.nasa.gov/missions/artemis/nasas-artemis-iii-mission-to-test-future-moon-lander-operations/"},
+        {"doc_type": "article", "url": "https://www.universetoday.com/articles/nasas-artemis-iii-lander-test-will-be-a-dress-rehearsal-for-returning-to-the-moon"},
+        {"doc_type": "article", "url": "https://www.nasa.gov/news-release/nasa-to-discuss-artemis-acceleration-status-of-upcoming-moon-missions/"}
+      ],
+      "_note": "Live 2026-10-31 (highlight-to-ask)."
+    },
+    {
+      "id": 12,
+      "question": "Regarding this passage from the journal: \"the Zwicky Transient Facility\"\n\nWhat is that?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "paper", "arxiv_id": "2608.30477"},
+        {"doc_type": "paper", "arxiv_id": "2610.02088"},
+        {"doc_type": "paper", "arxiv_id": "2610.40346"},
+        {"doc_type": "paper", "arxiv_id": "2610.40015"}
+      ],
+      "_note": "Live 2026-10-31. First question answered almost entirely from arXiv papers — tests the science half of the corpus."
+    },
+    {
+      "id": 13,
+      "question": "Regarding this passage from the journal: \"isolated galaxies lose the gas they need to form stars.\"\n\nWhy that happens?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "paper", "arxiv_id": "2610.20505"},
+        {"doc_type": "paper", "arxiv_id": "2609.09267"},
+        {"doc_type": "paper", "arxiv_id": "2610.19926"},
+        {"doc_type": "paper", "arxiv_id": "2609.04327"}
+      ],
+      "_note": "Live 2026-10-31. Edge-of-corpus case: the sources cover quenching mechanisms in general, not isolated galaxies specifically, and the live answer honestly said so while citing these four."
+    },
+    {
+      "id": 14,
+      "question": "did anyone try to save the Swift telescope?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://skyandtelescope.org/astronomy-news/mission-launches-to-rescue-swift-observatory/"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-mission-nasa-aging-swift-space.html"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-09-satellite-nasa-doomed-telescope.html"},
+        {"doc_type": "article", "url": "https://science.nasa.gov/missions/swift/nasa-highlights-lessons-learned-from-swift-boost-mission/"}
+      ],
+      "_note": "Live 2026-10-31. Multi-article narrative (rescue launched -> called off -> lessons learned)."
+    },
+    {
+      "id": 15,
+      "question": "did the young Sun affect Earth's climate?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-sun-galactic-journey-superflare-youth.html"},
+        {"doc_type": "article", "url": "https://science.nasa.gov/solar-system/starstruck-nasa-research-shows-how-suns-ancient-history-shaped-earth/"},
+        {"doc_type": "paper", "arxiv_id": "2610.08758"}
+      ],
+      "_note": "Live 2026-10-31. News + paper synthesis (faint young Sun paradox, superflares, heliosphere)."
+    },
+    {
+      "id": 16,
+      "question": "why was China's Moon mission postponed?",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-china-unmanned-moon-mission-delayed.html"},
+        {"doc_type": "article", "url": "https://phys.org/news/2026-08-china-abruptly-postpones-ambitious-lunar.html"},
+        {"doc_type": "article", "url": "https://www.universetoday.com/articles/china-postpones-the-change-7-mission"}
+      ],
+      "_note": "Live 2026-10-31. The sources only say 'launch conditions' — the live answer correctly flagged how vague that is."
     }
   ],
   "abstention": [
@@ -84,6 +186,18 @@
       "question": "what telescope to choose in 2026 for beginner?",
       "mode": "full",
       "_note": "Intent-mismatch case: the corpus is full of telescope documents (Roman, LBT, iLocater) so retrieval scores look fine, but they are science news, not buying advice. Expect a refusal that may legitimately cite sources when explaining what the corpus does cover."
+    },
+    {
+      "id": "A4",
+      "question": "Regarding this passage from the journal: \"An AI-powered navigation system called AutoNav\"\n\nWhat's the algorithn behind NASA's Perseverance rover's navigation system Autonav?",
+      "mode": "partial",
+      "_note": "REAL question (owner, 2026-10-31, typo kept verbatim). The corpus mentions AutoNav but never explains the algorithm; the live answer correctly refused while citing what the sources do say."
+    },
+    {
+      "id": "A5",
+      "question": "Regarding this passage from the journal: \"Sophie Adenot became the latest European to return from a long-duration mission in what ESA called her 'εpsilon mission.'\"\n\nWhy it is called like that?",
+      "mode": "partial",
+      "_note": "REAL question (owner, 2026-10-31). The mission-name doc exists in the corpus but never explains the name — the cleanest 'source found, answer absent' case we have."
     }
   ]
 }

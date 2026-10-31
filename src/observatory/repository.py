@@ -429,6 +429,25 @@ def search_chunks(embedding: list[float], limit: int = 8) -> list[RetrievedChunk
             return [RetrievedChunk(*row) for row in cur.fetchall()]
 
 
+def doc_in_corpus(doc_type: str, ident: str) -> bool:
+    """True if the document exists in this database.
+
+    Articles are identified by url, papers by arxiv_id (stored ids may
+    carry a version suffix like 2609.02406v1, so both spellings match).
+    Used by the eval runner to skip questions whose gold documents are
+    not in the corpus being evaluated, instead of scoring them as misses.
+    """
+    with get_conn() as conn, conn.cursor() as cur:
+        if doc_type == "paper":
+            cur.execute(
+                "SELECT 1 FROM papers WHERE arxiv_id = %s OR arxiv_id LIKE %s LIMIT 1",
+                (ident, ident + "v%"),
+            )
+        else:
+            cur.execute("SELECT 1 FROM articles WHERE url = %s LIMIT 1", (ident,))
+        return cur.fetchone() is not None
+
+
 @dataclass
 class AskedQuestion:
     """One real question sent to /ask, with what retrieval returned for it.
