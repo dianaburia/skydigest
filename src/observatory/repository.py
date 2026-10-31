@@ -429,6 +429,42 @@ def search_chunks(embedding: list[float], limit: int = 8) -> list[RetrievedChunk
             return [RetrievedChunk(*row) for row in cur.fetchall()]
 
 
+@dataclass
+class SpaceWeatherStat:
+    """Latest value and window extremes for one space-weather metric."""
+
+    metric: str  # 'kp' | 'sw_speed' | 'sw_density' | 'bz'
+    latest: float
+    latest_ts: datetime
+    minimum: float
+    maximum: float
+
+
+def get_space_weather_stats(days: int = 7) -> list[SpaceWeatherStat]:
+    """Per-metric summary of the last `days` of space weather.
+
+    The agent's SQL route: questions about current conditions ("what was
+    the Kp index this week?") are answered from these numbers directly —
+    measurements are never indexed as text, so vector search can't see them.
+    """
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT metric,
+                   (array_agg(value ORDER BY ts DESC))[1] AS latest,
+                   (array_agg(ts    ORDER BY ts DESC))[1] AS latest_ts,
+                   MIN(value) AS minimum,
+                   MAX(value) AS maximum
+            FROM space_weather
+            WHERE ts >= NOW() - make_interval(days => %s)
+            GROUP BY metric
+            ORDER BY metric
+            """,
+            (days,),
+        )
+        return [SpaceWeatherStat(*row) for row in cur.fetchall()]
+
+
 def doc_in_corpus(doc_type: str, ident: str) -> bool:
     """True if the document exists in this database.
 
