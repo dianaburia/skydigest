@@ -17,7 +17,7 @@ def _stub_responses(monkeypatch, statuses: list[int]):
     """
     calls: list[int] = []
 
-    def fake_get(url, *, params=None, timeout=None):
+    def fake_get(url, *, params=None, timeout=None, follow_redirects=False):
         status = statuses[min(len(calls), len(statuses) - 1)]
         calls.append(status)
         request = httpx.Request("GET", url)
