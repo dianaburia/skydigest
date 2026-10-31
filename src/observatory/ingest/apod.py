@@ -6,9 +6,15 @@ Idempotent: safe to run repeatedly, will not create duplicates.
 Since NASA moved APOD to science.nasa.gov (October 2026), the official API
 keeps returning correct ``date``/``explanation`` but substitutes the site's
 generic metadata for the real fields: ``title`` becomes "NASA Science" and
-``hdurl``/``url`` point at the NASA logo. The real title, photo, and
-permalink are therefore scraped from the APOD page itself; the API supplies
-the text and serves as a fallback when the page cannot be parsed.
+``hdurl``/``url`` point at the NASA logo. The real title and photo are
+therefore scraped from the APOD page itself; the API supplies the text and
+serves as a fallback when the page cannot be parsed.
+
+The row's url stays the classic dated permalink (apod.nasa.gov/apod/apYYMMDD
+.html): the RSS collector also ingests the new science.nasa.gov APOD pages,
+so using their URL here would collide with that row (url is unique) and the
+insert would silently no-op. Clustering later merges the two copies into one
+event, with this row contributing the photo.
 """
 
 import html
@@ -135,7 +141,9 @@ def fetch_apod() -> dict[str, Any] | None:
             api_image = None
         image_url = page.image_url or api_image
 
-    article_url = page.page_url or _apod_page_url(day)
+    # Never the science.nasa.gov permalink: the RSS collector may already
+    # hold that URL, and a url conflict would silently drop this insert.
+    article_url = _apod_page_url(day)
 
     inserted = insert_article(
         Article(

@@ -71,7 +71,9 @@ def test_fetch_prefers_page_fields_over_broken_api(monkeypatch):
     article = _run_fetch(monkeypatch, BROKEN_API_DATA, PAGE_HTML)
     assert article.title == "Night & a Spooky Planet"
     assert "Hverir_Vetter_1300.jpg" in article.image_url
-    assert "image-article/apod-2026-october-31" in article.url
+    # The classic dated URL, NOT the science.nasa.gov permalink: that one may
+    # already be taken by the RSS collector, which would no-op this insert.
+    assert article.url == "https://apod.nasa.gov/apod/ap261031.html"
     assert article.summary == "What spooky planet is this?"
 
 
