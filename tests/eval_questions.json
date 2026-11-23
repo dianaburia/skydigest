@@ -1,5 +1,5 @@
 {
-  "_comment": "Labeled evaluation set for the RAG pipeline. Canonical source for questions and expectations; human notes and check history live in the private EVAL.md. 'require': 'any' = hit if at least one expected doc is in top-8; 'all' = every listed doc must be found. Articles are identified by url, papers by arxiv_id (version suffix ignored). Questions 8-16 are REAL user questions (owner, 2026-10-31, from the asked_questions log); highlight-to-ask questions keep the exact combined string the chat sends. Time-sensitive questions (marked in _note) need periodic relabeling: their gold answer changes as the corpus grows.",
+  "_comment": "Labeled evaluation set for the RAG pipeline. Canonical source for questions and expectations; human notes and check history live in the private EVAL.md. 'require': 'any' = hit if at least one expected doc is in top-8; 'all' = every listed doc must be found. Articles are identified by url, papers by arxiv_id (version suffix ignored). Questions 8-17 are REAL user questions (owner, from the asked_questions log); highlight-to-ask questions keep the exact combined string the chat sends. Time-sensitive questions (marked in _note) need periodic relabeling: their gold answer changes as the corpus grows.",
   "retrieval": [
     {
       "id": 1,
@@ -166,6 +166,17 @@
         {"doc_type": "article", "url": "https://www.universetoday.com/articles/china-postpones-the-change-7-mission"}
       ],
       "_note": "Live 2026-10-31. The sources only say 'launch conditions' — the live answer correctly flagged how vague that is."
+    },
+    {
+      "id": 17,
+      "question": "tell me more about bepicolombo",
+      "require": "any",
+      "expected": [
+        {"doc_type": "article", "url": "https://www.esa.int/ESA_Multimedia/Videos/2026/08/Media_briefing_BepiColombo_s_next_milestone_towards_Mercury"},
+        {"doc_type": "article", "url": "https://www.esa.int/Science_Exploration/Space_Science/BepiColombo/Latest_updates_BepiColombo_s_arrival_at_Mercury"},
+        {"doc_type": "article", "url": "https://www.esa.int/Science_Exploration/Space_Science/BepiColombo/BepiColombo_begins_Mercury_arrival_with_MTM_separation_success"}
+      ],
+      "_note": "Live 2026-11-23. Broad entity question; the live answer cited 5 ESA sources. First two gold URLs confirmed verbatim from the 2026-09-05 issue footer; the MTM-separation URL is the feed's likely variant (ESA republishes under several sections) — verify against prod articles.url if it ever skips."
     }
   ],
   "abstention": [
